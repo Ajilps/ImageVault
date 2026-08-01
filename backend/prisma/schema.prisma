@@ -11,3 +11,140 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+
+enum UserRole {
+  ADMIN
+  PRODUCT_OWNER
+  USER
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+
+  imageQuota Int @default(5)
+
+  organizationId String?       @db.Uuid
+  organization   Organisation? @relation("OrganisationMembers", fields: [organizationId], references: [id])
+
+  uploads Image[] @relation("UploadedImages")
+
+  taggedImages Image[] @relation("TaggedUsers")
+
+  payments              Payment[]
+  notificationsSent     Notification[] @relation("NotificationSender")
+  notificationsReceived Notification[] @relation("NotificationReceivers")
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId])
+  @@map("users")
+}
+
+model Organisation {
+  id        String @id @default(uuid()) @db.Uuid
+  name      String
+  logoUrl   String
+  address   String
+  phone     String
+
+  adminId String @unique @db.Uuid
+
+  users User[] @relation("OrganisationMembers")
+
+  images Image[]
+
+  payments Payment[]
+
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+
+  @@map("organisations")
+}
+
+model Image {
+  id        String @id @default(uuid()) @db.Uuid
+  url       String
+  objectKey String @unique
+
+  uploadedById String @db.Uuid
+
+  uploadedBy User @relation("UploadedImages", fields: [uploadedById], references: [id])
+
+  organizationId String @db.Uuid
+
+  organization Organisation @relation(fields: [organizationId], references: [id])
+
+  tags User[] @relation("TaggedUsers")
+
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([uploadedById])
+  @@map("images")
+}
+
+model Payment {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String @db.Uuid
+
+  user User @relation(fields: [userId], references: [id])
+
+  organizationId String @db.Uuid
+
+  organization Organisation @relation(fields: [organizationId], references: [id])
+
+  amount Int
+
+  slotsPurchased Int
+
+  transactionId String @unique
+
+  status PaymentStatus
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([organizationId, createdAt])
+  @@map("payments")
+}
+
+model Notification {
+  id String @id @default(uuid()) @db.Uuid
+
+  organizationId String @db.Uuid
+
+  organization Organisation @relation(fields: [organizationId], references: [id])
+
+  senderId String @db.Uuid
+
+  sender User @relation("NotificationSender", fields: [senderId], references: [id])
+
+  imageId String @db.Uuid
+
+  image Image @relation(fields: [imageId], references: [id])
+
+  receiverUsers User[] @relation("NotificationReceivers")
+
+  message String
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([senderId])
+  @@map("notifications")
+}

@@ -1,0 +1,15 @@
+import { Router } from "express";
+import { getOrganisationImages, getUsers, patchUser, postUser, removeUser, } from "../controllers/admin.controller.js";
+import { requireAuth } from "../middleware/auth.js";
+import { authorize } from "../middleware/authorize.js";
+import { validateBody, validateParams, validateQuery } from "../middleware/validation.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { createUserSchema, imageQuerySchema, updateUserSchema, userIdParamsSchema, } from "../validators/schemas.js";
+const router = Router();
+router.use(requireAuth, authorize("ADMIN"));
+router.get("/users", asyncHandler(getUsers));
+router.post("/users", validateBody(createUserSchema), asyncHandler(postUser));
+router.patch("/users/:userId", validateParams(userIdParamsSchema), validateBody(updateUserSchema), asyncHandler(patchUser));
+router.delete("/users/:userId", validateParams(userIdParamsSchema), asyncHandler(removeUser));
+router.get("/admin/images", validateQuery(imageQuerySchema), asyncHandler(getOrganisationImages));
+export default router;
