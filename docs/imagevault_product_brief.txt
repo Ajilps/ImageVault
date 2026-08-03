@@ -1,10 +1,10 @@
 
 --- PAGE 1 ---
-Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+ImageVault  |  Product Brief  |  Confidential
 Page 1
 
-Image Upload & Payment System
- Intern Task Brief & Technical Specification
+ImageVault
+ Product Brief & Technical Specification
 
 Tech Stack
  Next.js (PWA)
@@ -18,13 +18,13 @@ Version
 Role
 Date
 1.0
-New Intern
+Development Team
 April 2026
 ■ This document is your complete reference for understanding, building, and testing the Image Upload &
 Payment System. Read every section carefully before writing any code.
 
 --- PAGE 2 ---
-Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+ImageVault  |  Product Brief  |  Confidential
 Page 2
 1. System Overview & Architecture
 A Progressive Web Application (PWA) built with Next.js that enables organisations to manage users who can
@@ -79,7 +79,7 @@ Azure Database for PostgreSQL
 (managed, scalable)
 
 --- PAGE 3 ---
-Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+ImageVault  |  Product Brief  |  Confidential
 Page 3
 2. Roles & Permissions
 Product Owner
@@ -100,7 +100,7 @@ User
 org receive a broadcast notification.
 
 --- PAGE 4 ---
-Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+ImageVault  |  Product Brief  |  Confidential
 Page 4
 3. Pages & Features
 Authentication
@@ -150,11 +150,11 @@ Profile
 User details, role, organisation info.
 
 --- PAGE 5 ---
-Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+ImageVault  |  Product Brief  |  Confidential
 Page 5
 
 --- PAGE 6 ---
-Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+ImageVault  |  Product Brief  |  Confidential
 Page 6
 4. Data Models
 User
@@ -209,7 +209,7 @@ timestamp
 Auto-generated
 
 --- PAGE 7 ---
-Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+ImageVault  |  Product Brief  |  Confidential
 Page 7
 Image
 Field
@@ -288,7 +288,7 @@ timestamp
 Auto-generated
 
 --- PAGE 8 ---
-Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+ImageVault  |  Product Brief  |  Confidential
 Page 8
 5. End-to-End User Flow
  1
@@ -335,7 +335,7 @@ Implement user management with ShadCN data table (CRUD) and org image
 gallery.
 
 --- PAGE 9 ---
-Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+ImageVault  |  Product Brief  |  Confidential
 Page 9
 6
 AWS S3 Integration
@@ -373,7 +373,7 @@ Write setup README, environment variable guide, and API endpoint
 documentation.
 
 --- PAGE 10 ---
-Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+ImageVault  |  Product Brief  |  Confidential
 Page 10
 7. Testing Strategy
 Frontend Tests (Jest + React Testing Library)
@@ -425,7 +425,7 @@ Deployment
 Frontend live on Vercel; backend on Azure VM; DB on Azure PostgreSQL.
 
 --- PAGE 11 ---
-Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+ImageVault  |  Product Brief  |  Confidential
 Page 11
 ■ Good luck! Work through the Developer Tasks in order, commit frequently, and ask questions early. We are
 here to help you succeed.

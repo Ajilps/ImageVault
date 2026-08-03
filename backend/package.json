@@ -1,7 +1,7 @@
 {
-  "name": "backend",
+  "name": "imagevault-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "ImageVault API for organisation image management, quotas, notifications, and payments",
   "main": "server.js",
   "scripts": {
     "dev": "nodemon",

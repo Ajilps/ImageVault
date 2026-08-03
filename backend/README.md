@@ -1,6 +1,6 @@
-# Image Upload API
+# ImageVault API
 
-This Express API implements the backend from the task brief: JWT authentication, role-scoped organisation and user management, quota-controlled image uploads, notifications, and Razorpay slot payments.
+This Express API implements the ImageVault backend: JWT authentication, role-scoped organisation and user management, quota-controlled image uploads, notifications, and Razorpay slot payments.
 
 ## Run locally
 

@@ -2,7 +2,7 @@
 
 Read these documents in order:
 
-1. [intern_task_brief.txt](./intern_task_brief.txt) — original business brief; preserve as the source record.
+1. [imagevault_product_brief.txt](./imagevault_product_brief.txt) — original ImageVault business brief and source record.
 2. [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md) — normative product rules, resolved architecture decisions, data invariants, and definition of done.
 3. [BUILD_GUIDE.md](./BUILD_GUIDE.md) — local setup, environment variables, production deployment, and smoke tests.
 4. [API_REFERENCE.md](./API_REFERENCE.md) — exact HTTP authentication, payload, response, error, and role contracts.
@@ -12,7 +12,7 @@ Read these documents in order:
 
 ## Precedence
 
-The task brief controls business intent. `PROJECT_OVERVIEW.md` resolves technical ambiguities in the brief for this repository. `API_REFERENCE.md` controls integration details. If code and documentation disagree, confirm the intended behaviour, then update code, shared types, tests, and documentation in the same change.
+The ImageVault product brief controls business intent. `PROJECT_OVERVIEW.md` resolves technical ambiguities in the brief for this repository. `API_REFERENCE.md` controls integration details. If code and documentation disagree, confirm the intended behaviour, then update code, shared types, tests, and documentation in the same change.
 
 ## Terminology
 

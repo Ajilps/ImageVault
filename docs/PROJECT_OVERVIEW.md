@@ -1,8 +1,8 @@
-# Image Upload and Payment System — Product Specification
+# ImageVault — Product Specification
 
 ## Document status
 
-This document translates `intern_task_brief.txt` into an implementation-ready specification. The brief is the business source of truth. Where it is ambiguous, this repository uses the decisions in **Architecture decisions** below. API payloads are defined in [API_REFERENCE.md](./API_REFERENCE.md), local and production setup in [BUILD_GUIDE.md](./BUILD_GUIDE.md), and implementation order in the backend and frontend plans.
+This document translates `imagevault_product_brief.txt` into an implementation-ready specification. The brief is the business source of truth. Where it is ambiguous, this repository uses the decisions in **Architecture decisions** below. API payloads are defined in [API_REFERENCE.md](./API_REFERENCE.md), local and production setup in [BUILD_GUIDE.md](./BUILD_GUIDE.md), and implementation order in the backend and frontend plans.
 
 ## Product goal
 
