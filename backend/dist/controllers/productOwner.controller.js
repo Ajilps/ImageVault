@@ -1,4 +1,4 @@
-import { createOrganisation, deleteOrganisation, listOrganisations, updateOrganisation, } from "../services/productOwner.service.js";
+import { createOrganisation, deleteOrganisation, listOrganisations, resetOrganisationAdminPassword, updateOrganisation, } from "../services/productOwner.service.js";
 export async function getOrganisations(_request, response) {
     response.json({ organisations: await listOrganisations() });
 }
@@ -15,4 +15,9 @@ export async function removeOrganisation(request, response) {
     const { organisationId } = request.params;
     await deleteOrganisation(organisationId);
     response.status(204).send();
+}
+export async function patchOrganisationAdminPassword(request, response) {
+    const { organisationId } = request.params;
+    const admin = await resetOrganisationAdminPassword(organisationId, request.body.newPassword);
+    response.json({ admin });
 }

@@ -4,6 +4,7 @@ import {
   createOrganisation,
   deleteOrganisation,
   listOrganisations,
+  resetOrganisationAdminPassword,
   updateOrganisation,
 } from "../services/productOwner.service.js";
 
@@ -26,4 +27,10 @@ export async function removeOrganisation(request: Request, response: Response) {
   const { organisationId } = request.params as { organisationId: string };
   await deleteOrganisation(organisationId);
   response.status(204).send();
+}
+
+export async function patchOrganisationAdminPassword(request: Request, response: Response) {
+  const { organisationId } = request.params as { organisationId: string };
+  const admin = await resetOrganisationAdminPassword(organisationId, request.body.newPassword);
+  response.json({ admin });
 }

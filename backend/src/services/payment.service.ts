@@ -7,9 +7,6 @@ import { AppError } from "../errors/appError.js";
 import { prisma } from "../lib/prisma.js";
 import type { AuthenticatedUser } from "./auth.service.js";
 
-const SLOT_PACK_SIZE = 5;
-const SLOT_PACK_PRICE_INR = 100;
-
 function organizationIdFor(user: AuthenticatedUser): string {
   if (!user.organizationId) {
     throw new AppError("You must belong to an organisation to make a payment.", 403, "ORGANISATION_REQUIRED");
@@ -83,8 +80,8 @@ async function markPaymentSuccessful(transactionId: string, userId?: string) {
 
 export async function createPaymentOrder(user: AuthenticatedUser, slotPacks: number) {
   const organizationId = organizationIdFor(user);
-  const amountInRupees = slotPacks * SLOT_PACK_PRICE_INR;
-  const slotsPurchased = slotPacks * SLOT_PACK_SIZE;
+  const amountInRupees = slotPacks * env.slotPackPriceInr;
+  const slotsPurchased = slotPacks * env.slotPackSize;
   const razorpay = getRazorpayClient();
 
   const order = await razorpay.orders.create({

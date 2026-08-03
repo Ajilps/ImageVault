@@ -71,7 +71,8 @@ export const ModelName = {
     Organisation: 'Organisation',
     Image: 'Image',
     Payment: 'Payment',
-    Notification: 'Notification'
+    Notification: 'Notification',
+    PushSubscription: 'PushSubscription'
 };
 /**
  * Enums
@@ -107,6 +108,8 @@ export const ImageScalarFieldEnum = {
     objectKey: 'objectKey',
     uploadedById: 'uploadedById',
     organizationId: 'organizationId',
+    visibility: 'visibility',
+    shareToken: 'shareToken',
     createdAt: 'createdAt'
 };
 export const PaymentScalarFieldEnum = {
@@ -126,6 +129,16 @@ export const NotificationScalarFieldEnum = {
     imageId: 'imageId',
     message: 'message',
     createdAt: 'createdAt'
+};
+export const PushSubscriptionScalarFieldEnum = {
+    id: 'id',
+    userId: 'userId',
+    endpoint: 'endpoint',
+    p256dh: 'p256dh',
+    auth: 'auth',
+    expirationTime: 'expirationTime',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
 };
 export const SortOrder = {
     asc: 'asc',

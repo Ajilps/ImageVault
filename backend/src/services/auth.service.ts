@@ -65,32 +65,49 @@ export function verifyAccessToken(token: string): { id: string } {
   }
 }
 
-export async function registerProductOwner(input: {
-  name: string;
-  email: string;
-  password: string;
-}) {
-  const email = input.email.toLowerCase();
-  const existingUser = await prisma.user.findUnique({ where: { email } });
-
-  if (existingUser) {
-    throw new AppError("An account with this email already exists.", 409, "EMAIL_IN_USE");
-  }
-
-  const user = await prisma.user.create({
-    data: {
-      name: input.name,
-      email,
-      passwordHash: await hashPassword(input.password),
-      role: "PRODUCT_OWNER",
+export async function ensureDefaultProductOwner() {
+  const existingUser = await prisma.user.findUnique({
+    where: { email: env.defaultProductOwnerEmail },
+    select: {
+      id: true,
+      role: true,
     },
-    select: userSelect,
   });
 
-  return {
-    user,
-    accessToken: createAccessToken(user),
-  };
+  if (existingUser) {
+    assertProductOwner(existingUser);
+    return existingUser;
+  }
+
+  const user = await prisma.user.upsert({
+    where: { email: env.defaultProductOwnerEmail },
+    update: {},
+    create: {
+      name: env.defaultProductOwnerName,
+      email: env.defaultProductOwnerEmail,
+      passwordHash: await hashPassword(env.defaultAccountPassword),
+      role: "PRODUCT_OWNER",
+      imageQuota: env.defaultImageQuota,
+    },
+    select: {
+      id: true,
+      role: true,
+    },
+  });
+
+  assertProductOwner(user);
+
+  return user;
+}
+
+function assertProductOwner(user: { role: string }) {
+  if (user.role !== "PRODUCT_OWNER") {
+    throw new AppError(
+      "DEFAULT_PRODUCT_OWNER_EMAIL is already assigned to a non-Product Owner account.",
+      500,
+      "CONFIGURATION_ERROR",
+    );
+  }
 }
 
 export async function login(input: { email: string; password: string }) {
@@ -107,10 +124,17 @@ export async function login(input: { email: string; password: string }) {
   }
 
   const { passwordHash: _passwordHash, ...safeUser } = user;
+  const accessToken = createAccessToken(safeUser);
+  const payload = jwt.decode(accessToken);
+
+  if (!payload || typeof payload === "string" || typeof payload.exp !== "number") {
+    throw new AppError("The access token expiry could not be determined.", 500, "TOKEN_CONFIGURATION_ERROR");
+  }
 
   return {
     user: safeUser,
-    accessToken: createAccessToken(safeUser),
+    accessToken,
+    accessTokenExpiresAt: payload.exp * 1000,
   };
 }
 
@@ -125,4 +149,31 @@ export async function getCurrentUser(userId: string) {
   }
 
   return user;
+}
+
+export async function changeOwnPassword(
+  userId: string,
+  input: { currentPassword: string; newPassword: string },
+) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { passwordHash: true },
+  });
+
+  if (!user) {
+    throw new AppError("User not found.", 404, "USER_NOT_FOUND");
+  }
+
+  if (!(await bcrypt.compare(input.currentPassword, user.passwordHash))) {
+    throw new AppError("The current password is incorrect.", 400, "CURRENT_PASSWORD_INVALID");
+  }
+
+  if (await bcrypt.compare(input.newPassword, user.passwordHash)) {
+    throw new AppError("The new password must be different from the current password.", 400, "PASSWORD_UNCHANGED");
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: await hashPassword(input.newPassword) },
+  });
 }

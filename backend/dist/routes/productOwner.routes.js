@@ -1,14 +1,15 @@
 import { Router } from "express";
-import { getOrganisations, patchOrganisation, postOrganisation, removeOrganisation, } from "../controllers/productOwner.controller.js";
+import { getOrganisations, patchOrganisation, patchOrganisationAdminPassword, postOrganisation, removeOrganisation, } from "../controllers/productOwner.controller.js";
 import { requireAuth } from "../middleware/auth.js";
 import { authorize } from "../middleware/authorize.js";
 import { validateBody, validateParams } from "../middleware/validation.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { createOrganisationSchema, organisationIdParamsSchema, updateOrganisationSchema, } from "../validators/schemas.js";
+import { createOrganisationSchema, organisationIdParamsSchema, resetAccountPasswordSchema, updateOrganisationSchema, } from "../validators/schemas.js";
 const router = Router();
 router.use(requireAuth, authorize("PRODUCT_OWNER"));
 router.get("/", asyncHandler(getOrganisations));
 router.post("/", validateBody(createOrganisationSchema), asyncHandler(postOrganisation));
 router.patch("/:organisationId", validateParams(organisationIdParamsSchema), validateBody(updateOrganisationSchema), asyncHandler(patchOrganisation));
+router.patch("/:organisationId/admin/password", validateParams(organisationIdParamsSchema), validateBody(resetAccountPasswordSchema), asyncHandler(patchOrganisationAdminPassword));
 router.delete("/:organisationId", validateParams(organisationIdParamsSchema), asyncHandler(removeOrganisation));
 export default router;

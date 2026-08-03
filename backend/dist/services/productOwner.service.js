@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
+import { env } from "../config/env.js";
 import { AppError } from "../errors/appError.js";
 import { prisma } from "../lib/prisma.js";
 import { hashPassword } from "./auth.service.js";
+import { deleteStoredObjects } from "./storage.service.js";
 const adminSelect = {
     id: true,
     name: true,
@@ -16,6 +18,9 @@ const organisationSelect = {
     address: true,
     phone: true,
     adminId: true,
+    admin: {
+        select: adminSelect,
+    },
     createdAt: true,
     _count: {
         select: {
@@ -44,8 +49,9 @@ export async function createOrganisation(input) {
                 id: adminId,
                 name: input.admin.name,
                 email: adminEmail,
-                passwordHash: await hashPassword(input.admin.password),
+                passwordHash: await hashPassword(env.defaultAccountPassword),
                 role: "ADMIN",
+                imageQuota: env.defaultImageQuota,
             },
             select: adminSelect,
         });
@@ -75,6 +81,27 @@ export async function updateOrganisation(organisationId, input) {
     });
     return organisation;
 }
+export async function resetOrganisationAdminPassword(organisationId, newPassword) {
+    const organisation = await prisma.organisation.findUnique({
+        where: { id: organisationId },
+        select: {
+            admin: {
+                select: { id: true, role: true },
+            },
+        },
+    });
+    if (!organisation) {
+        throw new AppError("Organisation not found.", 404, "ORGANISATION_NOT_FOUND");
+    }
+    if (organisation.admin.role !== "ADMIN") {
+        throw new AppError("The organisation Admin account is invalid.", 409, "INVALID_ORGANISATION_ADMIN");
+    }
+    return prisma.user.update({
+        where: { id: organisation.admin.id },
+        data: { passwordHash: await hashPassword(newPassword) },
+        select: adminSelect,
+    });
+}
 export async function deleteOrganisation(organisationId) {
     const existingOrganisation = await prisma.organisation.findUnique({
         where: { id: organisationId },
@@ -83,11 +110,26 @@ export async function deleteOrganisation(organisationId) {
     if (!existingOrganisation) {
         throw new AppError("Organisation not found.", 404, "ORGANISATION_NOT_FOUND");
     }
-    await prisma.$transaction(async (transaction) => {
+    const objectKeys = await prisma.$transaction(async (transaction) => {
+        const images = await transaction.image.findMany({
+            where: { organizationId: organisationId },
+            select: { objectKey: true },
+        });
+        const members = await transaction.user.findMany({
+            where: { organizationId: organisationId },
+            select: { id: true },
+        });
         await transaction.notification.deleteMany({ where: { organizationId: organisationId } });
         await transaction.image.deleteMany({ where: { organizationId: organisationId } });
         await transaction.payment.deleteMany({ where: { organizationId: organisationId } });
-        await transaction.user.deleteMany({ where: { organizationId: organisationId } });
         await transaction.organisation.delete({ where: { id: organisationId } });
+        await transaction.user.deleteMany({ where: { id: { in: members.map((member) => member.id) } } });
+        return images.map((image) => image.objectKey);
     });
+    try {
+        await deleteStoredObjects(objectKeys);
+    }
+    catch (error) {
+        console.error("Organisation records were deleted, but storage cleanup failed.", { organisationId, error });
+    }
 }

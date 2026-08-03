@@ -1,17 +1,23 @@
 import "dotenv/config";
 import type { Server } from "node:http";
 import app from "./app.js";
+import { env } from "./config/env.js";
 import { prisma } from "./lib/prisma.js";
+import { ensureDefaultProductOwner } from "./services/auth.service.js";
+import { assertStorageReady } from "./services/storage.service.js";
 
-const PORT = process.env.PORT || 3000;
+const PORT = env.port;
 let server: Server | undefined;
 
 async function start() {
   try {
     await prisma.$connect();
+    await ensureDefaultProductOwner();
+    await assertStorageReady();
 
     server = app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
+      console.log(`Default Product Owner account ensured: ${env.defaultProductOwnerEmail}`);
     });
   } catch (error) {
     console.error("Unable to connect to the database.", error);

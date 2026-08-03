@@ -1,15 +1,18 @@
 import { Router } from "express";
 
-import { getMe, loginUser, register } from "../controllers/auth.controller.js";
+import { getMe, loginUser, patchOwnPassword } from "../controllers/auth.controller.js";
 import { requireAuth } from "../middleware/auth.js";
+import { rateLimit } from "../middleware/rateLimit.js";
 import { validateBody } from "../middleware/validation.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { loginSchema, registerSchema } from "../validators/schemas.js";
+import { changeOwnPasswordSchema, loginSchema } from "../validators/schemas.js";
+import { env } from "../config/env.js";
 
 const router = Router();
 
-router.post("/register", validateBody(registerSchema), asyncHandler(register));
+router.use(rateLimit({ windowMs: env.loginRateLimitWindowMs, max: env.loginRateLimitMax }));
 router.post("/login", validateBody(loginSchema), asyncHandler(loginUser));
 router.get("/me", requireAuth, asyncHandler(getMe));
+router.patch("/password", requireAuth, validateBody(changeOwnPasswordSchema), asyncHandler(patchOwnPassword));
 
 export default router;

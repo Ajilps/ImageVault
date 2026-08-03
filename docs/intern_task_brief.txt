@@ -1,0 +1,431 @@
+
+--- PAGE 1 ---
+Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+Page 1
+
+Image Upload & Payment System
+ Intern Task Brief & Technical Specification
+
+Tech Stack
+ Next.js (PWA)
+ Node.js
+ PostgreSQL
+ Prisma
+ AWS S3
+ Razorpay
+ Azure
+Version
+Role
+Date
+1.0
+New Intern
+April 2026
+■ This document is your complete reference for understanding, building, and testing the Image Upload &
+Payment System. Read every section carefully before writing any code.
+
+--- PAGE 2 ---
+Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+Page 2
+1. System Overview & Architecture
+A Progressive Web Application (PWA) built with Next.js that enables organisations to manage users who can
+upload images with quota restrictions. Payments for additional uploads are handled via Razorpay, and images are
+stored in AWS S3. Authentication is managed with NextAuth and the UI is built using ShadCN components.
+Architecture Layers
+Layer
+Technology
+Purpose
+Frontend
+Next.js 14, ShadCN UI,
+Tailwind CSS
+PWA, SSR/CSR pages, role-based routing, component
+library
+Auth
+NextAuth.js
+JWT sessions, OAuth / credentials provider, role-based
+guards
+Backend API
+Node.js (Next.js API routes)
+REST endpoints, business logic, quota management,
+webhook handling
+ORM
+Prisma
+Type-safe DB access, migrations, schema management
+Database
+PostgreSQL (Azure Database)
+Persistent storage for users, images, payments,
+notifications
+File Storage
+AWS S3
+Image uploads; pre-signed URLs for secure access
+Payments
+Razorpay
+Slot purchases, webhook verification, transaction history
+Testing
+Jest + React Testing Library
+Unit & integration tests for frontend components and
+backend routes
+Deployment
+Vercel (frontend) + Azure VM
+(backend)
+CI/CD pipeline; Azure DB for PostgreSQL
+Deployment Overview
+Frontend
+Backend
+Database
+Vercel (Next.js static + SSR)
+Azure Virtual Machine (Node.js API
+server)
+Azure Database for PostgreSQL
+(managed, scalable)
+
+--- PAGE 3 ---
+Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+Page 3
+2. Roles & Permissions
+Product Owner
+ Create, edit, and delete organisations.
+ A default Admin user is automatically generated when a new organisation is created.
+ Does NOT manage users directly inside organisations.
+Admin
+ Created automatically when a new organisation is set up.
+ Can add, edit, and delete users within their specific organisation.
+ Manages user membership and permissions at the organisation level.
+User
+ Belongs to a specific organisation managed by an Admin.
+ Can upload up to 5 images for free.
+ To upload more images, must purchase additional slots in multiples of 5 (■100 per set).
+ Payment handled via Razorpay.
+ Can view all images uploaded by other users within the same organisation.
+ Can tag other users while uploading images — tagged user gets a direct notification; no tag → all users in the
+org receive a broadcast notification.
+
+--- PAGE 4 ---
+Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+Page 4
+3. Pages & Features
+Authentication
+Page
+Description
+Login Page
+NextAuth + ShadCN form with credentials/OAuth provider.
+Register Page
+Optional; Admin can also invite users directly.
+Role-based Redirects
+Product Owner → Org Dashboard | Admin → User Mgmt | User → Gallery
+Product Owner Pages
+Page
+Description
+Dashboard
+View all organisations. Actions: Create Org, Edit Org, Delete Org.
+Organisation Creation
+Form to create a new org; auto-generates a default Admin user.
+Admin Pages
+Page
+Description
+Dashboard
+View organisation details and all images uploaded within the org.
+User Management
+ShadCN data table with full CRUD: Add, Edit, Update, Delete users.
+Image Gallery
+Browse all images uploaded by users in the org.
+User Pages
+Page
+Description
+Dashboard
+Shows quota usage (e.g. 3/5 images). Button to purchase additional slots via
+Razorpay.
+Image Upload
+Upload images to AWS S3. Tag users via multi-select dropdown. Trigger
+notifications.
+Image Gallery
+View all org images. Filter by tags.
+Payment Page
+Razorpay checkout for purchasing slot packs. Transaction history.
+Shared Pages
+Page
+Description
+Notifications
+Recent notifications: tagged uploads and org-wide broadcasts.
+Profile
+User details, role, organisation info.
+
+--- PAGE 5 ---
+Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+Page 5
+
+--- PAGE 6 ---
+Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+Page 6
+4. Data Models
+User
+Field
+Type
+Notes
+id
+uuid
+Primary key
+name
+string
+Full name
+email
+string
+Unique login email
+role
+enum
+product_owner | admin | user
+organization_id
+uuid
+Foreign key → Organisation
+image_quota
+int
+Default 5; increments of 5 after payment
+created_at
+timestamp
+Auto-generated
+Organisation
+Field
+Type
+Notes
+id
+uuid
+Primary key
+name
+string
+Organisation name
+logo_url
+string
+S3 link to logo
+address
+string
+Physical address
+phone
+string
+Contact number
+admin_id
+uuid
+FK → default Admin User
+created_at
+timestamp
+Auto-generated
+
+--- PAGE 7 ---
+Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+Page 7
+Image
+Field
+Type
+Notes
+id
+uuid
+Primary key
+url
+string
+S3 object URL
+uploaded_by
+uuid
+FK → User
+organization_id
+uuid
+FK → Organisation
+tags
+uuid[]
+Array of tagged User IDs
+created_at
+timestamp
+Auto-generated
+Payment
+Field
+Type
+Notes
+id
+uuid
+Primary key
+user_id
+uuid
+FK → User
+organization_id
+uuid
+FK → Organisation
+amount
+int
+■100 per slot set
+slots_purchased
+int
+Always a multiple of 5
+transaction_id
+string
+Razorpay order/payment ID
+status
+enum
+pending | success | failed
+created_at
+timestamp
+Auto-generated
+Notification
+Field
+Type
+Notes
+id
+uuid
+Primary key
+organization_id
+uuid
+FK → Organisation
+sender_id
+uuid
+FK → User who uploaded
+receiver_ids
+uuid[]
+Tagged users or all org users
+image_id
+uuid
+FK → Image
+message
+string
+Notification text
+created_at
+timestamp
+Auto-generated
+
+--- PAGE 8 ---
+Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+Page 8
+5. End-to-End User Flow
+ 1
+Product Owner creates an organisation
+ 2
+Default Admin user is auto-generated for the org
+ 3
+Admin adds, edits, or removes users in the org
+ 4
+User logs in and can upload up to 5 images for free
+ 5
+Beyond 5 images → Razorpay payment required (■100 per 5 slots)
+ 6
+Payment success → quota increased by 5; images stored in AWS S3
+ 7
+If image is tagged → direct notification to tagged user only
+ 8
+If no tag → broadcast notification to all users in the org
+ 9
+All users in the org can browse the shared image gallery
+6. Developer Tasks
+#
+Task
+Description
+1
+Project Setup
+Initialise Next.js project with ShadCN UI, Tailwind CSS, and ESLint/Prettier
+config.
+2
+Authentication
+Configure NextAuth for credential-based login, JWT sessions, and role-based
+route guards.
+3
+Database & ORM
+Set up Prisma schema, run migrations against Azure PostgreSQL, seed initial
+data.
+4
+Product Owner Module
+Build organisation management dashboard (Create, Edit, Delete orgs;
+auto-create Admin).
+5
+Admin Module
+Implement user management with ShadCN data table (CRUD) and org image
+gallery.
+
+--- PAGE 9 ---
+Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+Page 9
+6
+AWS S3 Integration
+Configure S3 bucket, implement pre-signed URL upload flow, store image
+metadata in DB.
+7
+Quota Logic
+Enforce 5-image free limit; block uploads beyond quota until payment
+succeeds.
+8
+Razorpay Integration
+Create order, handle checkout, verify webhook signature, update quota on
+success.
+9
+Notification System
+Tagged upload → direct notification; untagged → broadcast; real-time or
+polling approach.
+10
+PWA Features
+Service worker, web manifest, offline page, push notification support.
+11
+Frontend Testing
+Write Jest + React Testing Library tests for critical UI components and hooks.
+12
+Backend Testing
+Write Jest unit tests for API route handlers, quota logic, and payment
+webhook.
+13
+Deployment
+Deploy frontend to Vercel, backend to Azure VM; configure environment
+variables.
+14
+Documentation
+Write setup README, environment variable guide, and API endpoint
+documentation.
+
+--- PAGE 10 ---
+Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+Page 10
+7. Testing Strategy
+Frontend Tests (Jest + React Testing Library)
+
+Login form renders correctly and shows validation errors on bad input.
+
+Role-based redirect logic routes users to the correct dashboard.
+
+Image upload component respects quota and shows correct error when exceeded.
+
+Razorpay payment button triggers the checkout flow.
+
+Notification badge updates on new notification arrival.
+
+Gallery filter by tag returns correct subset of images.
+Backend Tests (Jest)
+
+POST /api/organisations — creates org and default Admin; validates required fields.
+
+POST /api/users — Admin can add users; rejects duplicate email; enforces role.
+
+POST /api/images — blocks upload when quota exhausted; increments used_quota on success.
+
+POST /api/payments/verify — rejects tampered webhook signature; updates quota on success.
+
+GET /api/notifications — returns only notifications relevant to the calling user.
+
+Auth middleware — returns 401 for unauthenticated requests; 403 for wrong role.
+■ Aim for >80% test coverage on business-critical paths: quota logic, payment webhook verification, and
+role-based access control.
+8. Deliverables
+Deliverable
+Details
+Fully functional Next.js PWA
+Optimised for performance and user experience; installable on mobile.
+Authentication & RBAC
+NextAuth with proper role restrictions for Product Owner, Admin, and User.
+AWS S3 Image Storage
+Pre-signed URL uploads; metadata stored in PostgreSQL via Prisma.
+Razorpay Payment Integration
+Order creation, checkout, webhook verification, quota update on success.
+Notification System
+Tagged → direct; untagged → broadcast; visible in the Notifications page.
+Test Suite
+Jest + RTL frontend tests and Jest backend tests with >80% critical coverage.
+Documentation
+Setup README, .env guide, API docs, and this technical specification.
+Deployment
+Frontend live on Vercel; backend on Azure VM; DB on Azure PostgreSQL.
+
+--- PAGE 11 ---
+Image Upload & Payment System  |  Intern Task Brief  |  Confidential
+Page 11
+■ Good luck! Work through the Developer Tasks in order, commit frequently, and ask questions early. We are
+here to help you succeed.

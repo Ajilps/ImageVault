@@ -12,6 +12,12 @@ build/
 out/
 lib/
 
+# Application source folders named "lib" must be versioned.
+!backend/src/lib/
+!backend/src/lib/**
+!frontend/src/lib/
+!frontend/src/lib/**
+
 # TypeScript
 *.tsbuildinfo
 

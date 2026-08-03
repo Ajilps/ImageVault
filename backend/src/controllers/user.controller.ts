@@ -3,10 +3,13 @@ import type { Request, Response } from "express";
 import { AppError } from "../errors/appError.js";
 import {
   completeImageUpload,
+  createPublicImageShare,
   getQuota,
+  listOrganisationMembers,
   listNotifications,
   listOrganisationImages,
   requestImageUpload,
+  revokePublicImageShare,
 } from "../services/user.service.js";
 
 function authenticatedUser(request: Request) {
@@ -32,11 +35,28 @@ export async function postCompleteUpload(request: Request, response: Response) {
 }
 
 export async function getImages(request: Request, response: Response) {
+  const query = (request.validatedQuery ?? {}) as { taggedUserId?: string };
   response.json({
-    images: await listOrganisationImages(authenticatedUser(request), request.query.taggedUserId as string | undefined),
+    images: await listOrganisationImages(authenticatedUser(request), query.taggedUserId),
   });
+}
+
+export async function getOrganisationMembers(request: Request, response: Response) {
+  response.json({ users: await listOrganisationMembers(authenticatedUser(request)) });
 }
 
 export async function getNotifications(request: Request, response: Response) {
   response.json({ notifications: await listNotifications(authenticatedUser(request)) });
+}
+
+export async function postImageShare(request: Request, response: Response) {
+  const { imageId } = request.params as { imageId: string };
+  const share = await createPublicImageShare(authenticatedUser(request), imageId);
+  response.status(201).json({ share });
+}
+
+export async function deleteImageShare(request: Request, response: Response) {
+  const { imageId } = request.params as { imageId: string };
+  await revokePublicImageShare(authenticatedUser(request), imageId);
+  response.status(204).send();
 }

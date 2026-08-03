@@ -6,6 +6,7 @@ declare global {
         role: "ADMIN" | "PRODUCT_OWNER" | "USER";
         organizationId: string | null;
       };
+      validatedQuery?: unknown;
     }
   }
 }

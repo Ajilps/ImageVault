@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 
 import { AppError } from "../errors/appError.js";
-import { createUser, deleteUser, listUsers, updateUser } from "../services/admin.service.js";
+import { allocateUserSlots, createUser, deleteUser, listUsers, updateUser } from "../services/admin.service.js";
 import { listOrganisationImages } from "../services/user.service.js";
 
 function authenticatedUser(request: Request) {
@@ -33,8 +33,15 @@ export async function removeUser(request: Request, response: Response) {
   response.status(204).send();
 }
 
+export async function postUserSlots(request: Request, response: Response) {
+  const { userId } = request.params as { userId: string };
+  const user = await allocateUserSlots(authenticatedUser(request), userId, request.body.additionalSlots);
+  response.json({ user });
+}
+
 export async function getOrganisationImages(request: Request, response: Response) {
+  const query = (request.validatedQuery ?? {}) as { taggedUserId?: string };
   response.json({
-    images: await listOrganisationImages(authenticatedUser(request), request.query.taggedUserId as string | undefined),
+    images: await listOrganisationImages(authenticatedUser(request), query.taggedUserId),
   });
 }

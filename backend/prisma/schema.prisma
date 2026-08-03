@@ -25,6 +25,11 @@ enum PaymentStatus {
   FAILED
 }
 
+enum ImageVisibility {
+  PUBLIC
+  PRIVATE
+}
+
 model User {
   id           String   @id @default(uuid()) @db.Uuid
   name         String
@@ -32,7 +37,7 @@ model User {
   passwordHash String
   role         UserRole
 
-  imageQuota Int @default(5)
+  imageQuota Int
 
   organizationId String?       @db.Uuid
   organization   Organisation? @relation("OrganisationMembers", fields: [organizationId], references: [id])
@@ -44,6 +49,8 @@ model User {
   payments              Payment[]
   notificationsSent     Notification[] @relation("NotificationSender")
   notificationsReceived Notification[] @relation("NotificationReceivers")
+  pushSubscriptions     PushSubscription[]
+  adminOf               Organisation?      @relation("OrganisationAdmin")
 
   createdAt DateTime @default(now())
 
@@ -59,6 +66,7 @@ model Organisation {
   phone     String
 
   adminId String @unique @db.Uuid
+  admin   User   @relation("OrganisationAdmin", fields: [adminId], references: [id])
 
   users User[] @relation("OrganisationMembers")
 
@@ -86,6 +94,9 @@ model Image {
 
   organization Organisation @relation(fields: [organizationId], references: [id])
 
+  visibility ImageVisibility @default(PUBLIC)
+  shareToken String? @unique
+
   tags User[] @relation("TaggedUsers")
 
   notifications Notification[]
@@ -93,6 +104,7 @@ model Image {
   createdAt DateTime @default(now())
 
   @@index([organizationId, createdAt])
+  @@index([organizationId, visibility, createdAt])
   @@index([uploadedById])
   @@map("images")
 }
@@ -147,4 +159,19 @@ model Notification {
   @@index([organizationId, createdAt])
   @@index([senderId])
   @@map("notifications")
+}
+
+model PushSubscription {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @db.Uuid
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint       String    @unique
+  p256dh         String
+  auth           String
+  expirationTime DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }

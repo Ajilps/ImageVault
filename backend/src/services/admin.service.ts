@@ -1,6 +1,8 @@
 import { AppError } from "../errors/appError.js";
+import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
 import { hashPassword, type AuthenticatedUser } from "./auth.service.js";
+import { deleteStoredObjects } from "./storage.service.js";
 
 const managedUserSelect = {
   id: true,
@@ -37,7 +39,7 @@ export async function listUsers(admin: AuthenticatedUser) {
 
 export async function createUser(
   admin: AuthenticatedUser,
-  input: { name: string; email: string; password: string },
+  input: { name: string; email: string },
 ) {
   const email = input.email.toLowerCase();
   const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -50,8 +52,9 @@ export async function createUser(
     data: {
       name: input.name,
       email,
-      passwordHash: await hashPassword(input.password),
+      passwordHash: await hashPassword(env.defaultAccountPassword),
       role: "USER",
+      imageQuota: env.defaultImageQuota,
       organizationId: organizationIdFor(admin),
     },
     select: managedUserSelect,
@@ -104,6 +107,49 @@ export async function updateUser(
   });
 }
 
+export async function allocateUserSlots(
+  admin: AuthenticatedUser,
+  userId: string,
+  additionalSlots: number,
+) {
+  const organizationId = organizationIdFor(admin);
+  const maximumCurrentQuota = env.maxUserImageQuota - additionalSlots;
+
+  const updated = await prisma.user.updateMany({
+    where: {
+      id: userId,
+      organizationId,
+      role: "USER",
+      imageQuota: { lte: maximumCurrentQuota },
+    },
+    data: {
+      imageQuota: { increment: additionalSlots },
+    },
+  });
+
+  if (!updated.count) {
+    const user = await prisma.user.findFirst({
+      where: { id: userId, organizationId, role: "USER" },
+      select: { imageQuota: true },
+    });
+
+    if (!user) {
+      throw new AppError("User not found in your organisation.", 404, "USER_NOT_FOUND");
+    }
+
+    throw new AppError(
+      `This allocation would exceed the configured maximum quota of ${env.maxUserImageQuota}.`,
+      400,
+      "QUOTA_LIMIT_EXCEEDED",
+    );
+  }
+
+  return prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: managedUserSelect,
+  });
+}
+
 export async function deleteUser(admin: AuthenticatedUser, userId: string) {
   const organizationId = organizationIdFor(admin);
   const user = await prisma.user.findFirst({
@@ -119,10 +165,10 @@ export async function deleteUser(admin: AuthenticatedUser, userId: string) {
     throw new AppError("User not found in your organisation.", 404, "USER_NOT_FOUND");
   }
 
-  await prisma.$transaction(async (transaction) => {
+  const objectKeys = await prisma.$transaction(async (transaction) => {
     const uploads = await transaction.image.findMany({
       where: { uploadedById: userId },
-      select: { id: true },
+      select: { id: true, objectKey: true },
     });
     const imageIds = uploads.map((image) => image.id);
 
@@ -137,5 +183,12 @@ export async function deleteUser(admin: AuthenticatedUser, userId: string) {
     await transaction.image.deleteMany({ where: { uploadedById: userId } });
     await transaction.payment.deleteMany({ where: { userId } });
     await transaction.user.delete({ where: { id: userId } });
+    return uploads.map((image) => image.objectKey);
   });
+
+  try {
+    await deleteStoredObjects(objectKeys);
+  } catch (error) {
+    console.error("User records were deleted, but storage cleanup failed.", { userId, error });
+  }
 }

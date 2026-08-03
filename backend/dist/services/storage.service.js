@@ -1,4 +1,4 @@
-import { DeleteObjectsCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client, } from "@aws-sdk/client-s3";
+import { DeleteObjectsCommand, GetObjectCommand, HeadBucketCommand, HeadObjectCommand, PutObjectCommand, S3Client, } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "../config/env.js";
 import { AppError } from "../errors/appError.js";
@@ -21,6 +21,15 @@ const storageClient = new S3Client({
     ...(isMinio ? { forcePathStyle: true } : {}),
     ...(credentials ? { credentials } : {}),
 });
+export async function assertStorageReady() {
+    try {
+        await storageClient.send(new HeadBucketCommand({ Bucket: env.storageBucket }));
+    }
+    catch (error) {
+        console.error(`Storage bucket readiness check failed for ${env.storageBucket}.`, error);
+        throw new AppError(`Storage bucket '${env.storageBucket}' is unavailable. Create it and configure its CORS policy before starting the API.`, 500, "STORAGE_UNAVAILABLE");
+    }
+}
 export async function createPresignedUploadUrl(input) {
     return getSignedUrl(storageClient, new PutObjectCommand({
         Bucket: env.storageBucket,

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { basename } from "node:path";
 
 import { env } from "../config/env.js";
@@ -11,6 +11,8 @@ import {
   storageUri,
 } from "./storage.service.js";
 import type { AuthenticatedUser } from "./auth.service.js";
+import { sendPushNotifications } from "./push.service.js";
+import { visibleImageFilterFor } from "./imageVisibility.js";
 
 function organizationIdFor(user: AuthenticatedUser): string {
   if (!user.organizationId) {
@@ -42,9 +44,11 @@ const imageInclude = {
   },
 } as const;
 
-async function withDownloadUrl<T extends { objectKey: string }>(image: T) {
+async function withDownloadUrl<T extends { objectKey: string; shareToken?: string | null }>(image: T, revealShareToken = false) {
+  const { shareToken, ...safeImage } = image;
   return {
-    ...image,
+    ...safeImage,
+    shareToken: revealShareToken ? shareToken ?? null : null,
     downloadUrl: await createPresignedDownloadUrl(image.objectKey),
   };
 }
@@ -86,7 +90,7 @@ export async function requestImageUpload(
   const quota = await getQuota(user);
 
   if (quota.remaining < 1) {
-    throw new AppError("Your image quota has been exhausted. Purchase another five-slot pack to continue.", 403, "QUOTA_EXHAUSTED");
+    throw new AppError(`Your image quota has been exhausted. Purchase another ${env.slotPackSize}-slot pack to continue.`, 403, "QUOTA_EXHAUSTED");
   }
 
   const objectKey = objectKeyFor(user, input.fileName);
@@ -105,7 +109,7 @@ export async function requestImageUpload(
 
 export async function completeImageUpload(
   user: AuthenticatedUser,
-  input: { objectKey: string; tagUserIds: string[] },
+  input: { objectKey: string; tagUserIds: string[]; visibility: "PUBLIC" | "PRIVATE" },
 ) {
   const organizationId = organizationIdFor(user);
   const expectedPrefix = `organisations/${organizationId}/users/${user.id}/`;
@@ -115,6 +119,10 @@ export async function completeImageUpload(
   }
 
   await assertUploadedImage(input.objectKey);
+
+  if (input.visibility === "PRIVATE" && input.tagUserIds.length) {
+    throw new AppError("Private images cannot tag other users.", 400, "PRIVATE_IMAGE_TAGS_NOT_ALLOWED");
+  }
 
   const uniqueTagUserIds = [...new Set(input.tagUserIds)];
   const taggedUsers = uniqueTagUserIds.length
@@ -131,7 +139,7 @@ export async function completeImageUpload(
     throw new AppError("Every tagged user must belong to your organisation.", 400, "INVALID_TAGGED_USER");
   }
 
-  const image = await prisma.$transaction(async (transaction) => {
+  const createImageAndNotification = () => prisma.$transaction(async (transaction) => {
     const currentUser = await transaction.user.findUnique({
       where: { id: user.id },
       select: {
@@ -150,7 +158,7 @@ export async function completeImageUpload(
 
     if (imageCount >= currentUser.imageQuota) {
       throw new AppError(
-        "Your image quota has been exhausted. Purchase another five-slot pack to continue.",
+        `Your image quota has been exhausted. Purchase another ${env.slotPackSize}-slot pack to continue.`,
         403,
         "QUOTA_EXHAUSTED",
       );
@@ -162,6 +170,7 @@ export async function completeImageUpload(
         objectKey: input.objectKey,
         uploadedById: user.id,
         organizationId,
+        visibility: input.visibility,
         ...(uniqueTagUserIds.length
           ? {
               tags: {
@@ -173,6 +182,10 @@ export async function completeImageUpload(
       include: imageInclude,
     });
 
+    if (input.visibility === "PRIVATE") {
+      return { createdImage, receiverUserIds: [] as string[], message: null as string | null };
+    }
+
     const receiverUserIds = uniqueTagUserIds.length
       ? uniqueTagUserIds
       : (
@@ -182,6 +195,10 @@ export async function completeImageUpload(
           })
         ).map((member) => member.id);
 
+    const message = uniqueTagUserIds.length
+      ? `${currentUser.name} tagged you in an image upload.`
+      : `${currentUser.name} uploaded a new image.`;
+
     await transaction.notification.create({
       data: {
         organizationId,
@@ -190,22 +207,46 @@ export async function completeImageUpload(
         receiverUsers: {
           connect: receiverUserIds.map((id) => ({ id })),
         },
-        message: uniqueTagUserIds.length
-          ? `${currentUser.name} tagged you in an image upload.`
-          : `${currentUser.name} uploaded a new image.`,
+        message,
       },
     });
 
-    return createdImage;
-  });
+    return { createdImage, receiverUserIds, message: message as string | null };
+  }, { isolationLevel: "Serializable" });
 
-  return withDownloadUrl(image);
+  let result: Awaited<ReturnType<typeof createImageAndNotification>> | undefined;
+  for (let attempt = 1; attempt <= env.quotaTransactionMaxRetries; attempt += 1) {
+    try {
+      result = await createImageAndNotification();
+      break;
+    } catch (error) {
+      const isWriteConflict = (error as { code?: string }).code === "P2034";
+      if (!isWriteConflict || attempt === env.quotaTransactionMaxRetries) {
+        throw error;
+      }
+    }
+  }
+
+  if (!result) {
+    throw new AppError("The upload could not be completed safely. Please retry.", 409, "UPLOAD_CONFLICT");
+  }
+
+  if (result.message && result.receiverUserIds.length) {
+    void sendPushNotifications(result.receiverUserIds, {
+      title: "ImageVault notification",
+      body: result.message,
+      url: "/notifications",
+    }).catch((error) => console.error("Push notification dispatch failed.", error));
+  }
+
+  return withDownloadUrl(result.createdImage, true);
 }
 
 export async function listOrganisationImages(user: AuthenticatedUser, taggedUserId?: string) {
   const images = await prisma.image.findMany({
     where: {
       organizationId: organizationIdFor(user),
+      ...visibleImageFilterFor(user.id),
       ...(taggedUserId
         ? {
             tags: {
@@ -218,13 +259,106 @@ export async function listOrganisationImages(user: AuthenticatedUser, taggedUser
     orderBy: { createdAt: "desc" },
   });
 
-  return Promise.all(images.map(withDownloadUrl));
+  return Promise.all(images.map((image) => withDownloadUrl(image, image.uploadedById === user.id)));
+}
+
+export async function createPublicImageShare(user: AuthenticatedUser, imageId: string) {
+  const image = await prisma.image.findFirst({
+    where: {
+      id: imageId,
+      uploadedById: user.id,
+      organizationId: organizationIdFor(user),
+    },
+    select: { id: true, visibility: true, shareToken: true },
+  });
+
+  if (!image) {
+    throw new AppError("Image not found among your uploads.", 404, "IMAGE_NOT_FOUND");
+  }
+
+  if (image.visibility !== "PUBLIC") {
+    throw new AppError("Only organisation-public images can have a public link.", 400, "PRIVATE_IMAGE_NOT_SHAREABLE");
+  }
+
+  if (image.shareToken) {
+    return { shareToken: image.shareToken };
+  }
+
+  const shareToken = randomBytes(env.publicShareTokenBytes).toString("base64url");
+  const updated = await prisma.image.updateMany({
+    where: { id: image.id, shareToken: null },
+    data: { shareToken },
+  });
+
+  if (updated.count) {
+    return { shareToken };
+  }
+
+  const current = await prisma.image.findUnique({
+    where: { id: image.id },
+    select: { shareToken: true },
+  });
+
+  if (!current?.shareToken) {
+    throw new AppError("The public link could not be created safely. Please retry.", 409, "PUBLIC_SHARE_CONFLICT");
+  }
+
+  return { shareToken: current.shareToken };
+}
+
+export async function revokePublicImageShare(user: AuthenticatedUser, imageId: string) {
+  const updated = await prisma.image.updateMany({
+    where: {
+      id: imageId,
+      uploadedById: user.id,
+      organizationId: organizationIdFor(user),
+    },
+    data: { shareToken: null },
+  });
+
+  if (!updated.count) {
+    throw new AppError("Image not found among your uploads.", 404, "IMAGE_NOT_FOUND");
+  }
+}
+
+export async function getPublicSharedImage(shareToken: string) {
+  const image = await prisma.image.findUnique({
+    where: { shareToken },
+    include: imageInclude,
+  });
+
+  if (!image || image.visibility !== "PUBLIC") {
+    throw new AppError("This public image link is invalid or has been revoked.", 404, "PUBLIC_SHARE_NOT_FOUND");
+  }
+
+  const { objectKey, shareToken: _shareToken, url: _url, organizationId: _organizationId, uploadedById: _uploadedById, tags: _tags, ...publicImage } = image;
+  return {
+    ...publicImage,
+    downloadUrl: await createPresignedDownloadUrl(objectKey),
+  };
+}
+
+export async function listOrganisationMembers(user: AuthenticatedUser) {
+  return prisma.user.findMany({
+    where: { organizationId: organizationIdFor(user) },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      imageQuota: true,
+      organizationId: true,
+      createdAt: true,
+    },
+    orderBy: [{ role: "asc" }, { name: "asc" }],
+  });
 }
 
 export async function listNotifications(user: AuthenticatedUser) {
   const notifications = await prisma.notification.findMany({
     where: {
       organizationId: organizationIdFor(user),
+      image: { visibility: "PUBLIC" },
       receiverUsers: {
         some: { id: user.id },
       },

@@ -3,6 +3,7 @@ import { Router } from "express";
 import {
   getOrganisations,
   patchOrganisation,
+  patchOrganisationAdminPassword,
   postOrganisation,
   removeOrganisation,
 } from "../controllers/productOwner.controller.js";
@@ -13,6 +14,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import {
   createOrganisationSchema,
   organisationIdParamsSchema,
+  resetAccountPasswordSchema,
   updateOrganisationSchema,
 } from "../validators/schemas.js";
 
@@ -26,6 +28,12 @@ router.patch(
   validateParams(organisationIdParamsSchema),
   validateBody(updateOrganisationSchema),
   asyncHandler(patchOrganisation),
+);
+router.patch(
+  "/:organisationId/admin/password",
+  validateParams(organisationIdParamsSchema),
+  validateBody(resetAccountPasswordSchema),
+  asyncHandler(patchOrganisationAdminPassword),
 );
 router.delete("/:organisationId", validateParams(organisationIdParamsSchema), asyncHandler(removeOrganisation));
 

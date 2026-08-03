@@ -24,6 +24,8 @@ export function validateParams(schema) {
 }
 export function validateQuery(schema) {
     return validate(schema, (request) => request.query, (request, value) => {
-        request.query = value;
+        // Express 5 exposes request.query through a getter-only property. Keep
+        // Zod's parsed/coerced result separately instead of assigning to it.
+        request.validatedQuery = value;
     });
 }

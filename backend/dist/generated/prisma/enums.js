@@ -17,3 +17,7 @@ export const PaymentStatus = {
     SUCCESS: 'SUCCESS',
     FAILED: 'FAILED'
 };
+export const ImageVisibility = {
+    PUBLIC: 'PUBLIC',
+    PRIVATE: 'PRIVATE'
+};

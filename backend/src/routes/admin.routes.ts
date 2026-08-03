@@ -4,6 +4,7 @@ import {
   getOrganisationImages,
   getUsers,
   patchUser,
+  postUserSlots,
   postUser,
   removeUser,
 } from "../controllers/admin.controller.js";
@@ -13,18 +14,20 @@ import { validateBody, validateParams, validateQuery } from "../middleware/valid
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {
   createUserSchema,
+  allocateUserSlotsSchema,
   imageQuerySchema,
   updateUserSchema,
   userIdParamsSchema,
 } from "../validators/schemas.js";
 
 const router = Router();
+const requireAdmin = [requireAuth, authorize("ADMIN")] as const;
 
-router.use(requireAuth, authorize("ADMIN"));
-router.get("/users", asyncHandler(getUsers));
-router.post("/users", validateBody(createUserSchema), asyncHandler(postUser));
-router.patch("/users/:userId", validateParams(userIdParamsSchema), validateBody(updateUserSchema), asyncHandler(patchUser));
-router.delete("/users/:userId", validateParams(userIdParamsSchema), asyncHandler(removeUser));
-router.get("/admin/images", validateQuery(imageQuerySchema), asyncHandler(getOrganisationImages));
+router.get("/users", ...requireAdmin, asyncHandler(getUsers));
+router.post("/users", ...requireAdmin, validateBody(createUserSchema), asyncHandler(postUser));
+router.patch("/users/:userId", ...requireAdmin, validateParams(userIdParamsSchema), validateBody(updateUserSchema), asyncHandler(patchUser));
+router.post("/users/:userId/slots", ...requireAdmin, validateParams(userIdParamsSchema), validateBody(allocateUserSlotsSchema), asyncHandler(postUserSlots));
+router.delete("/users/:userId", ...requireAdmin, validateParams(userIdParamsSchema), asyncHandler(removeUser));
+router.get("/admin/images", ...requireAdmin, validateQuery(imageQuerySchema), asyncHandler(getOrganisationImages));
 
 export default router;
