@@ -9,7 +9,7 @@ describe("account, quota, and visibility API contracts", () => {
     const fetchMock = jest.fn().mockResolvedValue({ status: 204, ok: true });
     globalThis.fetch = fetchMock as typeof fetch;
 
-    await api.changeOwnPassword("token", { currentPassword: "old-password", newPassword: "new-password" });
+    await api.changeOwnPassword({ currentPassword: "old-password", newPassword: "new-password" });
 
     const [url, request] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toContain("/api/auth/password");
@@ -25,10 +25,28 @@ describe("account, quota, and visibility API contracts", () => {
     });
     globalThis.fetch = fetchMock as typeof fetch;
 
-    await api.resetOrganisationAdminPassword("token", "organisation-id", "new-password");
+    await api.resetOrganisationAdminPassword("organisation-id", "new-password");
 
     expect(fetchMock.mock.calls[0][0]).toContain("/api/organisations/organisation-id/admin/password");
     expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).toEqual({ newPassword: "new-password" });
+  });
+
+  it("creates an organisation without requiring a logo URL", async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      status: 201,
+      ok: true,
+      json: async () => ({ organisation: { id: "organisation-id" }, temporaryPassword: "generated-password" }),
+    });
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    await api.createOrganisation({
+      name: "No Logo Studio",
+      address: "12 Market Street",
+      phone: "+91 90000 00000",
+      admin: { name: "Ada Admin", email: "ada@example.com" },
+    });
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).not.toHaveProperty("logoUrl");
   });
 
   it("allocates additional slots through the tenant-scoped User route", async () => {
@@ -39,7 +57,7 @@ describe("account, quota, and visibility API contracts", () => {
     });
     globalThis.fetch = fetchMock as typeof fetch;
 
-    await api.allocateUserSlots("token", "user-id", 10);
+    await api.allocateUserSlots("user-id", 10);
 
     expect(fetchMock.mock.calls[0][0]).toContain("/api/users/user-id/slots");
     expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).toEqual({ additionalSlots: 10 });
@@ -53,7 +71,7 @@ describe("account, quota, and visibility API contracts", () => {
     });
     globalThis.fetch = fetchMock as typeof fetch;
 
-    await api.completeUpload("token", { objectKey: "owned-key", tagUserIds: [], visibility: "PRIVATE" });
+    await api.completeUpload({ objectKey: "owned-key", tagUserIds: [], visibility: "PRIVATE" });
 
     expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).toEqual({
       objectKey: "owned-key",
@@ -72,12 +90,22 @@ describe("account, quota, and visibility API contracts", () => {
       .mockResolvedValueOnce({ status: 204, ok: true });
     globalThis.fetch = fetchMock as typeof fetch;
 
-    await api.createImageShare("token", "image-id");
-    await api.revokeImageShare("token", "image-id");
+    await api.createImageShare("image-id");
+    await api.revokeImageShare("image-id");
 
     expect(fetchMock.mock.calls[0][0]).toContain("/api/images/image-id/share");
     expect(fetchMock.mock.calls[0][1].method).toBe("POST");
     expect(fetchMock.mock.calls[1][1].method).toBe("DELETE");
+  });
+
+  it("clears one notification through the authenticated backend proxy", async () => {
+    const fetchMock = jest.fn().mockResolvedValue({ status: 204, ok: true });
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    await api.clearNotification("notification-id");
+
+    expect(fetchMock.mock.calls[0][0]).toContain("/api/notifications/notification-id");
+    expect(fetchMock.mock.calls[0][1].method).toBe("DELETE");
   });
 
   it("loads a shared image without an authentication token", async () => {

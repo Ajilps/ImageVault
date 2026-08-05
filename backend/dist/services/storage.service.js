@@ -21,6 +21,14 @@ const storageClient = new S3Client({
     ...(isMinio ? { forcePathStyle: true } : {}),
     ...(credentials ? { credentials } : {}),
 });
+const presigningClient = env.storagePublicEndpoint && env.storagePublicEndpoint !== env.storageEndpoint
+    ? new S3Client({
+        region: env.awsRegion,
+        endpoint: env.storagePublicEndpoint,
+        ...(isMinio ? { forcePathStyle: true } : {}),
+        ...(credentials ? { credentials } : {}),
+    })
+    : storageClient;
 export async function assertStorageReady() {
     try {
         await storageClient.send(new HeadBucketCommand({ Bucket: env.storageBucket }));
@@ -31,7 +39,7 @@ export async function assertStorageReady() {
     }
 }
 export async function createPresignedUploadUrl(input) {
-    return getSignedUrl(storageClient, new PutObjectCommand({
+    return getSignedUrl(presigningClient, new PutObjectCommand({
         Bucket: env.storageBucket,
         Key: input.objectKey,
         ContentType: input.contentType,
@@ -58,7 +66,7 @@ export async function assertUploadedImage(objectKey) {
     }
 }
 export async function createPresignedDownloadUrl(objectKey) {
-    return getSignedUrl(storageClient, new GetObjectCommand({
+    return getSignedUrl(presigningClient, new GetObjectCommand({
         Bucket: env.storageBucket,
         Key: objectKey,
     }), { expiresIn: env.presignExpiresIn });

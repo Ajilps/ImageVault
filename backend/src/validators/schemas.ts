@@ -5,6 +5,7 @@ import { env } from "../config/env.js";
 const password = z.string().min(env.passwordMinLength).max(env.passwordMaxLength);
 const name = z.string().trim().min(1).max(env.nameMaxLength);
 const email = z.string().trim().email().max(env.emailMaxLength);
+const logoUrl = z.union([z.string().url().max(env.urlMaxLength), z.literal("")]);
 
 export const userIdParamsSchema = z.object({
   userId: z.string().uuid(),
@@ -12,6 +13,10 @@ export const userIdParamsSchema = z.object({
 
 export const imageIdParamsSchema = z.object({
   imageId: z.string().uuid(),
+});
+
+export const notificationIdParamsSchema = z.object({
+  notificationId: z.string().uuid(),
 });
 
 const publicShareTokenLength = Buffer.alloc(env.publicShareTokenBytes).toString("base64url").length;
@@ -45,7 +50,7 @@ export const resetAccountPasswordSchema = z.object({
 
 export const createOrganisationSchema = z.object({
   name,
-  logoUrl: z.string().url().max(env.urlMaxLength),
+  logoUrl: logoUrl.optional(),
   address: z.string().trim().min(1).max(env.addressMaxLength),
   phone: z.string().trim().min(env.phoneMinLength).max(env.phoneMaxLength),
   admin: z.object({
@@ -57,7 +62,7 @@ export const createOrganisationSchema = z.object({
 export const updateOrganisationSchema = z
   .object({
     name: name.optional(),
-    logoUrl: z.string().url().max(env.urlMaxLength).optional(),
+    logoUrl: logoUrl.optional(),
     address: z.string().trim().min(1).max(env.addressMaxLength).optional(),
     phone: z.string().trim().min(env.phoneMinLength).max(env.phoneMaxLength).optional(),
   })

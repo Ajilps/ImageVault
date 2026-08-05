@@ -59,7 +59,7 @@ export type Notification = {
   message: string;
   createdAt: string;
   sender: { id: string; name: string };
-  image: { id: string; objectKey: string; downloadUrl: string };
+  image: { id: string };
 };
 
 export type Payment = {

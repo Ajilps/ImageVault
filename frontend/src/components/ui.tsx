@@ -41,7 +41,7 @@ export function StatCard({ label, value, detail, accent = "indigo" }: { label: s
 
 export function Message({ children, tone = "error" }: { children: ReactNode; tone?: "error" | "success" | "info" }) {
   const tones = {
-    error: "border-rose-200 bg-rose-50 text-rose-700",
+    error: "border-red-300 bg-red-50 font-semibold text-red-700",
     success: "border-emerald-200 bg-emerald-50 text-emerald-700",
     info: "border-indigo-200 bg-indigo-50 text-indigo-700",
   };

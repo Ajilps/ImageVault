@@ -15,12 +15,12 @@ npm run dev
 Required frontend environment:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:4000
+API_URL=http://localhost:4000
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=replace-with-a-long-random-secret
 ```
 
-Passwords, account emails, AWS/Razorpay/VAPID private secrets, quota, prices, limits, and polling intervals do not belong in frontend source. The frontend obtains safe business rules and the VAPID public key from `GET /api/config/public`.
+`API_URL` is used only by the Next.js server. Browser requests use the same-origin `/api/backend` bridge, which reads the backend JWT from the encrypted HTTP-only NextAuth cookie. Passwords, account emails, AWS/Razorpay/VAPID private secrets, quota, prices, limits, and polling intervals do not belong in frontend source. The frontend obtains safe business rules and the VAPID public key from `GET /api/config/public`.
 
 ## Verification
 

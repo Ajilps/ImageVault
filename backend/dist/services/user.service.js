@@ -285,7 +285,7 @@ export async function listOrganisationMembers(user) {
     });
 }
 export async function listNotifications(user) {
-    const notifications = await prisma.notification.findMany({
+    return prisma.notification.findMany({
         where: {
             organizationId: organizationIdFor(user),
             image: { visibility: "PUBLIC" },
@@ -293,7 +293,10 @@ export async function listNotifications(user) {
                 some: { id: user.id },
             },
         },
-        include: {
+        select: {
+            id: true,
+            message: true,
+            createdAt: true,
             sender: {
                 select: {
                     id: true,
@@ -301,19 +304,28 @@ export async function listNotifications(user) {
                 },
             },
             image: {
-                select: {
-                    id: true,
-                    objectKey: true,
-                },
+                select: { id: true },
             },
         },
         orderBy: { createdAt: "desc" },
     });
-    return Promise.all(notifications.map(async (notification) => ({
-        ...notification,
-        image: {
-            ...notification.image,
-            downloadUrl: await createPresignedDownloadUrl(notification.image.objectKey),
+}
+export async function clearNotification(user, notificationId) {
+    const notification = await prisma.notification.findFirst({
+        where: {
+            id: notificationId,
+            organizationId: organizationIdFor(user),
+            receiverUsers: { some: { id: user.id } },
         },
-    })));
+        select: { id: true },
+    });
+    if (!notification) {
+        throw new AppError("Notification not found.", 404, "NOTIFICATION_NOT_FOUND");
+    }
+    await prisma.notification.update({
+        where: { id: notification.id },
+        data: {
+            receiverUsers: { disconnect: { id: user.id } },
+        },
+    });
 }

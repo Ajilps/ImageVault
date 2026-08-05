@@ -24,6 +24,13 @@ test("organisation setup requires a valid initial Admin", () => {
   });
 
   assert.equal(result.success, true);
+  assert.equal(createOrganisationSchema.safeParse({
+    name: "No Logo Studio",
+    address: "12 Market Street",
+    phone: "+91 90000 00000",
+    admin: { name: "Ada Admin", email: "ada@example.com" },
+  }).success, true);
+  assert.equal(createOrganisationSchema.safeParse({ ...result.data, logoUrl: "not-a-url" }).success, false);
   assert.equal(createOrganisationSchema.safeParse({ ...result.data, admin: { ...result.data.admin, email: "not-an-email" } }).success, false);
 });
 

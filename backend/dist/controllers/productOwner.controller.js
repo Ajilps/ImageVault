@@ -3,8 +3,8 @@ export async function getOrganisations(_request, response) {
     response.json({ organisations: await listOrganisations() });
 }
 export async function postOrganisation(request, response) {
-    const organisation = await createOrganisation(request.body);
-    response.status(201).json({ organisation });
+    const result = await createOrganisation(request.body);
+    response.status(201).json(result);
 }
 export async function patchOrganisation(request, response) {
     const { organisationId } = request.params;

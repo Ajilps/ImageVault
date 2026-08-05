@@ -5,7 +5,7 @@ import type { CurrentUser } from "@/lib/types";
 declare module "next-auth" {
   interface Session {
     user: CurrentUser & DefaultSession["user"];
-    backendAccessToken?: string;
+    backendAccessTokenExpiresAt?: number;
     authError?: "BACKEND_TOKEN_EXPIRED";
   }
 

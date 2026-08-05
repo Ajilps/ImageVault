@@ -138,7 +138,7 @@ Request:
 }
 ```
 
-Names: 1–120 trimmed characters; logo: stable browser-renderable URL up to 2048 (normally HTTPS via a logo CDN/public asset path); address: 1–500; phone: 5–40; email: valid and up to 255. Returns `201 {"organisation": {...Organisation, "admin": {id,name,email,role,createdAt}}}`. Duplicate global email returns `409 EMAIL_IN_USE`.
+Names: 1–120 trimmed characters; logo: optional stable browser-renderable URL up to 2048 (normally HTTPS via a logo CDN/public asset path); address: 1–500; phone: 5–40; email: valid and up to 255. Returns `201 {"organisation": {...Organisation, "admin": {id,name,email,role,createdAt}}, "temporaryPassword": "..."}`. The generated Admin password is returned only once in this response. Duplicate global email returns `409 EMAIL_IN_USE`.
 
 ### `PATCH /api/organisations/:organisationId`
 
@@ -162,7 +162,7 @@ Returns `200 {"users": ManagedUser[]}` for the caller's organisation. Each entry
 
 ### `POST /api/users`
 
-Request: `{ "name": "User Name", "email": "user@acme.example" }` with the same name/email limits. Role and organisation are server-assigned. Returns `201 {"user": ManagedUser}`. Duplicate email returns `409 EMAIL_IN_USE`.
+Request: `{ "name": "User Name", "email": "user@acme.example" }` with the same name/email limits. Role and organisation are server-assigned. Returns `201 {"user": ManagedUser, "temporaryPassword": "..."}`. The generated User password is returned only once in this response. Duplicate email returns `409 EMAIL_IN_USE`.
 
 ### `PATCH /api/users/:userId`
 
@@ -242,14 +242,20 @@ Returns `200 {"notifications": Notification[]}` where the caller is a receiver, 
 
 ```ts
 type Notification = {
-  id: string; organizationId: string; senderId: string; imageId: string;
-  message: string; createdAt: string;
+  id: string; message: string; createdAt: string;
   sender: { id: string; name: string };
-  image: { id: string; objectKey: string; downloadUrl: string };
+  image: { id: string };
 };
 ```
 
-The current contract has no read/unread mutation.
+Notification responses intentionally omit storage object keys and signed download URLs. The frontend links to the authenticated `/gallery?imageId=:id` route, which applies the normal organisation/visibility policy and opens the image preview.
+
+### `DELETE /api/notifications/:notificationId` — Admin or User
+
+Clears the notification only for the authenticated recipient. Other recipients continue to see their copy.
+
+- Response: `204 No Content`
+- Errors: `404 NOTIFICATION_NOT_FOUND` when the notification does not belong to the authenticated recipient.
 
 ### `POST /api/push/subscriptions` — Admin or User
 

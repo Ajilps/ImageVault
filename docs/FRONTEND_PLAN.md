@@ -27,8 +27,8 @@ Use reusable loading, empty, error, confirmation, form-field, dialog, table, ima
 
 1. Configure Next.js, TypeScript strictness, Tailwind, ShadCN UI, ESLint, Prettier, Jest, and React Testing Library.
 2. Build responsive dashboard shell, mobile navigation, page header, skeleton/loading, empty, and recoverable error states.
-3. Create typed API functions that normalise `{error:{code,message}}`, handle `204`, encode query values, and attach the backend token.
-4. Add environment validation for `NEXT_PUBLIC_API_URL`, `NEXTAUTH_URL`, and `NEXTAUTH_SECRET`.
+3. Create typed API functions that normalise `{error:{code,message}}`, handle `204`, encode query values, and use a same-origin server bridge that attaches the backend token.
+4. Add environment validation for server-only `API_URL`, `NEXTAUTH_URL`, and `NEXTAUTH_SECRET`.
 5. Define accessible colour contrast, focus styles, labels, keyboard operation, and reduced-motion behaviour.
 
 Exit criteria: lint, tests, and production build pass; shared states render at mobile and desktop widths.
@@ -47,7 +47,7 @@ Exit criteria: valid/invalid login, redirect map, unauthenticated route, wrong-r
 ## Phase 3 — Product Owner experience
 
 1. Organisation table shows logo, name, address, phone, Admin, member/image counts, and created date.
-2. Create form requires organisation fields plus Admin name/email and clearly explains bootstrap credentials.
+2. Create form requires organisation fields plus Admin name/email and shows the generated one-time Admin password with show/copy controls.
 3. Edit supported organisation fields; deletion requires name-based or explicit destructive confirmation.
 4. Provide a Product Owner control to reset the linked Admin password with configured validation bounds.
 5. Handle duplicate Admin email, validation, server failure, empty state, and stale refresh.
@@ -57,7 +57,7 @@ Exit criteria: table and all mutations match the API contract and are keyboard a
 ## Phase 4 — Admin experience
 
 1. User table shows name, email, role, completed uploads, quota, and created date.
-2. Create only normal Users; edit name/email and optional password; delete with confirmation.
+2. Create only normal Users and show their generated one-time password with show/copy controls; edit name/email and optional password; delete with confirmation.
 3. Allocate additional image slots with the API-provided per-action limit and display the updated quota.
 3. Admin dashboard shows organisation details and gallery summary.
 4. Gallery is read-only for Admin and supports member tag filtering.

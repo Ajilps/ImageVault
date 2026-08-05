@@ -3,8 +3,8 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
-import { useAuth } from "@/components/auth-provider";
 import { usePublicConfig } from "@/components/public-config-provider";
+import { PasswordField, TemporaryPasswordNotice } from "@/components/password-field";
 import { RoleGate } from "@/components/role-gate";
 import { LoadingCards, Message, PageHeader, StatCard } from "@/components/ui";
 import { ApiError, api } from "@/lib/api";
@@ -20,7 +20,6 @@ const initialForm = {
 };
 
 export default function OrganisationsPage() {
-  const { token } = useAuth();
   const { config } = usePublicConfig();
   const [organisations, setOrganisations] = useState<Organisation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,20 +34,20 @@ export default function OrganisationsPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [createdAdmin, setCreatedAdmin] = useState<{ label: string; password: string } | null>(null);
 
   const loadOrganisations = useCallback(async () => {
-    if (!token) return;
     setIsLoading(true);
     setError(null);
     try {
-      const response = await api.organisations(token);
+      const response = await api.organisations();
       setOrganisations(response.organisations);
     } catch (caughtError) {
       setError(caughtError instanceof ApiError ? caughtError.message : "Could not load organisations.");
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     void loadOrganisations();
@@ -70,6 +69,7 @@ export default function OrganisationsPage() {
 
   function beginCreate() {
     setError(null);
+    setCreatedAdmin(null);
     setEditingOrganisation(null);
     setForm(initialForm);
     setIsFormOpen(true);
@@ -90,13 +90,12 @@ export default function OrganisationsPage() {
 
   async function submitOrganisation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!token) return;
     setError(null);
     setIsSubmitting(true);
 
     try {
       if (editingOrganisation) {
-        const response = await api.updateOrganisation(token, editingOrganisation.id, {
+        const response = await api.updateOrganisation(editingOrganisation.id, {
           name: form.name,
           logoUrl: form.logoUrl,
           address: form.address,
@@ -104,9 +103,9 @@ export default function OrganisationsPage() {
         });
         setOrganisations((current) => current.map((organisation) => organisation.id === response.organisation.id ? response.organisation : organisation));
       } else {
-        const response = await api.createOrganisation(token, {
+        const response = await api.createOrganisation({
           name: form.name,
-          logoUrl: form.logoUrl,
+          ...(form.logoUrl.trim() ? { logoUrl: form.logoUrl.trim() } : {}),
           address: form.address,
           phone: form.phone,
           admin: {
@@ -115,6 +114,7 @@ export default function OrganisationsPage() {
           },
         });
         setOrganisations((current) => [response.organisation, ...current]);
+        setCreatedAdmin({ label: response.organisation.admin.email, password: response.temporaryPassword });
       }
       closeForm();
     } catch (caughtError) {
@@ -125,10 +125,10 @@ export default function OrganisationsPage() {
   }
 
   async function removeOrganisation(organisation: Organisation) {
-    if (!token || !window.confirm(`Delete ${organisation.name}? This removes its users, images, and payments.`)) return;
+    if (!window.confirm(`Delete ${organisation.name}? This removes its users, images, and payments.`)) return;
 
     try {
-      await api.deleteOrganisation(token, organisation.id);
+      await api.deleteOrganisation(organisation.id);
       setOrganisations((current) => current.filter((item) => item.id !== organisation.id));
     } catch (caughtError) {
       setError(caughtError instanceof ApiError ? caughtError.message : "Could not delete the organisation.");
@@ -152,7 +152,7 @@ export default function OrganisationsPage() {
 
   async function submitAdminPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!token || !passwordOrganisation) return;
+    if (!passwordOrganisation) return;
     setPasswordError(null);
     setPasswordSuccess(null);
     if (adminPassword !== confirmAdminPassword) {
@@ -162,7 +162,7 @@ export default function OrganisationsPage() {
 
     setIsResettingPassword(true);
     try {
-      await api.resetOrganisationAdminPassword(token, passwordOrganisation.id, adminPassword);
+      await api.resetOrganisationAdminPassword(passwordOrganisation.id, adminPassword);
       setPasswordSuccess(`Password changed for ${passwordOrganisation.admin.name}.`);
       setAdminPassword("");
       setConfirmAdminPassword("");
@@ -192,15 +192,17 @@ export default function OrganisationsPage() {
         <StatCard label="Images" value={totals.images} detail="Stored by your teams" accent="amber" />
       </div>
 
+      {createdAdmin ? <TemporaryPasswordNotice accountLabel={createdAdmin.label} password={createdAdmin.password} onDismiss={() => setCreatedAdmin(null)} /> : null}
+
       {isFormOpen ? (
         <form onSubmit={submitOrganisation} className="mb-8 rounded-2xl border border-indigo-100 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-1 border-b border-slate-100 pb-5">
             <h2 className="text-lg font-bold text-slate-900">{editingOrganisation ? `Edit ${editingOrganisation.name}` : "New organisation"}</h2>
-            <p className="text-sm text-slate-500">{editingOrganisation ? "Update the organisation details used by its members." : "The Admin account is created as part of this secure setup and receives the configured default password."}</p>
+            <p className="text-sm text-slate-500">{editingOrganisation ? "Update the organisation details used by its members." : "The Admin account receives a unique generated password that is shown once after creation."}</p>
           </div>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             <Field label="Organisation name" value={form.name} onChange={(value) => setForm((current) => ({ ...current, name: value }))} />
-            <Field label="Logo URL" type="url" value={form.logoUrl} onChange={(value) => setForm((current) => ({ ...current, logoUrl: value }))} />
+            <Field label="Logo URL (optional)" type="url" required={false} value={form.logoUrl} onChange={(value) => setForm((current) => ({ ...current, logoUrl: value }))} />
             <Field label="Address" value={form.address} onChange={(value) => setForm((current) => ({ ...current, address: value }))} />
             <Field label="Phone" value={form.phone} onChange={(value) => setForm((current) => ({ ...current, phone: value }))} />
           </div>
@@ -224,8 +226,8 @@ export default function OrganisationsPage() {
           <h2 className="text-lg font-bold text-slate-900">Change Admin password</h2>
           <p className="mt-1 text-sm text-slate-500">Set a new password for {passwordOrganisation.admin.name} ({passwordOrganisation.admin.email}).</p>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <Field label="New Admin password" type="password" minLength={config?.passwordMinLength} maxLength={config?.passwordMaxLength} value={adminPassword} onChange={setAdminPassword} />
-            <Field label="Confirm Admin password" type="password" minLength={config?.passwordMinLength} maxLength={config?.passwordMaxLength} value={confirmAdminPassword} onChange={setConfirmAdminPassword} />
+            <PasswordField required label="New Admin password" autoComplete="new-password" minLength={config?.passwordMinLength} maxLength={config?.passwordMaxLength} value={adminPassword} onChange={setAdminPassword} />
+            <PasswordField required label="Confirm Admin password" autoComplete="new-password" minLength={config?.passwordMinLength} maxLength={config?.passwordMaxLength} value={confirmAdminPassword} onChange={setConfirmAdminPassword} />
           </div>
           {passwordError ? <div className="mt-4"><Message>{passwordError}</Message></div> : null}
           {passwordSuccess ? <div className="mt-4"><Message tone="success">{passwordSuccess}</Message></div> : null}
@@ -243,7 +245,13 @@ export default function OrganisationsPage() {
         <div className="grid gap-4 xl:grid-cols-2">
           {organisations.map((organisation) => (
             <article key={organisation.id} className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <img src={organisation.logoUrl} alt="" className="size-14 rounded-2xl border border-slate-100 object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+              {organisation.logoUrl ? (
+                <img src={organisation.logoUrl} alt="" className="size-14 rounded-2xl border border-slate-100 object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+              ) : (
+                <span aria-hidden="true" className="grid size-14 shrink-0 place-items-center rounded-2xl border border-black bg-zinc-100 text-lg font-black text-black">
+                  {organisation.name.slice(0, 1).toUpperCase()}
+                </span>
+              )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -271,8 +279,8 @@ export default function OrganisationsPage() {
   );
 }
 
-function Field({ label, value, onChange, type = "text", minLength, maxLength }: { label: string; value: string; onChange: (value: string) => void; type?: string; minLength?: number; maxLength?: number }) {
-  return <label className="text-sm font-semibold text-slate-700">{label}<input required type={type} minLength={minLength} maxLength={maxLength} value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" /></label>;
+function Field({ label, value, onChange, type = "text", minLength, maxLength, required = true }: { label: string; value: string; onChange: (value: string) => void; type?: string; minLength?: number; maxLength?: number; required?: boolean }) {
+  return <label className="text-sm font-semibold text-slate-700">{label}<input required={required} type={type} minLength={minLength} maxLength={maxLength} value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" /></label>;
 }
 
 function EmptyOrganisations({ onCreate }: { onCreate: () => void }) {

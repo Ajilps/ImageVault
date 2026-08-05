@@ -13,7 +13,7 @@ import type { ManagedUser, Quota } from "@/lib/types";
 
 export default function UploadPage() {
   const router = useRouter();
-  const { token, user } = useAuth();
+  const { user } = useAuth();
   const { config, error: configError } = usePublicConfig();
   const [members, setMembers] = useState<ManagedUser[]>([]);
   const [quota, setQuota] = useState<Quota | null>(null);
@@ -28,10 +28,9 @@ export default function UploadPage() {
   const [fileInputKey, setFileInputKey] = useState(0);
 
   const loadData = useCallback(async () => {
-    if (!token) return;
     setIsLoading(true);
     try {
-      const [quotaResponse, membersResponse] = await Promise.all([api.quota(token), api.members(token)]);
+      const [quotaResponse, membersResponse] = await Promise.all([api.quota(), api.members()]);
       setQuota(quotaResponse.quota);
       setMembers(membersResponse.users.filter((member) => member.id !== user?.id));
     } catch (caughtError) {
@@ -39,7 +38,7 @@ export default function UploadPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [token, user?.id]);
+  }, [user?.id]);
 
   useEffect(() => { void loadData(); }, [loadData]);
 
@@ -75,7 +74,7 @@ export default function UploadPage() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!token || !file) {
+    if (!file) {
       setError("Choose an image before uploading.");
       return;
     }
@@ -83,14 +82,14 @@ export default function UploadPage() {
 
     try {
       setUploadStage("signing");
-      const uploadResponse = await api.createUploadUrl(token, { fileName: file.name, contentType: file.type });
+      const uploadResponse = await api.createUploadUrl({ fileName: file.name, contentType: file.type });
       if (file.size > uploadResponse.upload.maxFileSize) {
         throw new ApiError(`This file is larger than the ${Math.round(uploadResponse.upload.maxFileSize / 1024 / 1024)} MB limit.`, 400);
       }
       setUploadStage("uploading");
       await uploadFile(uploadResponse.upload.uploadUrl, file);
       setUploadStage("completing");
-      await api.completeUpload(token, { objectKey: uploadResponse.upload.objectKey, tagUserIds: selectedTags, visibility });
+      await api.completeUpload({ objectKey: uploadResponse.upload.objectKey, tagUserIds: selectedTags, visibility });
       setSuccess("Image uploaded and saved to your organisation gallery.");
       setFile(null); setSelectedTags([]); setVisibility("PUBLIC");
       setFileInputKey((current) => current + 1);

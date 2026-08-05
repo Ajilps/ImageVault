@@ -11,8 +11,8 @@ export async function getUsers(request, response) {
     response.json({ users: await listUsers(authenticatedUser(request)) });
 }
 export async function postUser(request, response) {
-    const user = await createUser(authenticatedUser(request), request.body);
-    response.status(201).json({ user });
+    const result = await createUser(authenticatedUser(request), request.body);
+    response.status(201).json(result);
 }
 export async function patchUser(request, response) {
     const { userId } = request.params;

@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/components/auth-provider";
+import { PasswordField } from "@/components/password-field";
 import { Message } from "@/components/ui";
 import { ApiError } from "@/lib/api";
 import { homeForRole } from "@/lib/roles";
@@ -63,19 +64,16 @@ export default function LoginPage() {
             className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
           />
         </label>
-        <label className="block text-sm font-semibold text-slate-700">
-          Password
-          <input
-            required
-            minLength={config?.passwordMinLength}
-            maxLength={config?.passwordMaxLength}
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Your password"
-            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
-          />
-        </label>
+        <PasswordField
+          required
+          minLength={config?.passwordMinLength}
+          maxLength={config?.passwordMaxLength}
+          autoComplete="current-password"
+          label="Password"
+          value={password}
+          onChange={setPassword}
+          placeholder="Your password"
+        />
         <button
           type="submit"
           disabled={isSubmitting}

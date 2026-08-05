@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
@@ -21,6 +22,10 @@ const userSelect = {
 const roles = ["ADMIN", "PRODUCT_OWNER", "USER"];
 export async function hashPassword(password) {
     return bcrypt.hash(password, env.bcryptSaltRounds);
+}
+export function generateTemporaryPassword() {
+    const length = Math.min(env.passwordMaxLength, Math.max(env.passwordMinLength, 16));
+    return randomBytes(Math.ceil(length * 0.75)).toString("base64url").slice(0, length);
 }
 export function createAccessToken(user) {
     return jwt.sign({

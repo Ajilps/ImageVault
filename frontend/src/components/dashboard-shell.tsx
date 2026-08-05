@@ -40,7 +40,7 @@ const navigation: Record<UserRole, NavigationItem[]> = {
 export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, token, isReady, logout } = useAuth();
+  const { user, isReady, logout } = useAuth();
   const { config } = usePublicConfig();
   const [notificationCount, setNotificationCount] = useState(0);
 
@@ -49,14 +49,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }, [isReady, router, user]);
 
   useEffect(() => {
-    if (!token || !user || user.role === "PRODUCT_OWNER" || !config) {
+    if (!user || user.role === "PRODUCT_OWNER" || !config) {
       return;
     }
 
     let isActive = true;
     const refreshNotifications = async () => {
       try {
-        const response = await api.notifications(token);
+        const response = await api.notifications();
         if (isActive) {
           setNotificationCount(response.notifications.length);
         }
@@ -69,13 +69,15 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     const refreshWhenVisible = () => { if (document.visibilityState === "visible") void refreshNotifications(); };
     const interval = window.setInterval(refreshWhenVisible, config.notificationPollIntervalMs);
     document.addEventListener("visibilitychange", refreshWhenVisible);
+    window.addEventListener("imagevault:notifications-changed", refreshNotifications);
 
     return () => {
       isActive = false;
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener("imagevault:notifications-changed", refreshNotifications);
     };
-  }, [config, token, user]);
+  }, [config, user]);
 
   if (!isReady || !user) {
     return <div className="grid min-h-screen place-items-center bg-slate-50 text-sm text-slate-500">Loading workspace…</div>;
@@ -84,7 +86,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const items = navigation[user.role];
 
   return (
-    <div className="min-h-screen bg-[#f5f7fb] text-slate-900">
+    <div className="min-h-screen bg-zinc-100 text-black">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r border-slate-200 bg-white px-4 py-5 lg:flex">
         <Link href={homeForRole(user.role)} className="mb-9 flex items-center gap-3 px-2">
           <span className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-500 text-base font-bold text-white shadow-lg shadow-indigo-200">
@@ -147,10 +149,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               type="button"
               aria-label="Sign out"
               className="grid size-9 place-items-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700 transition hover:bg-indigo-200"
-              onClick={() => {
-                logout();
-                router.replace("/login");
-              }}
+              onClick={() => { void logout().finally(() => router.replace("/login")); }}
             >
               {user.name.charAt(0).toUpperCase()}
             </button>

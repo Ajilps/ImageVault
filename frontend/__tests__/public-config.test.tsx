@@ -43,7 +43,7 @@ describe("public runtime configuration", () => {
 
     expect(screen.getByText("Loading configuration")).toBeInTheDocument();
     expect(await screen.findByText("3 slots for ₹75")).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledWith("http://localhost:4000/api/config/public", expect.objectContaining({ cache: "no-store" }));
+    expect(fetchMock).toHaveBeenCalledWith("/api/backend/api/config/public", expect.objectContaining({ cache: "no-store" }));
   });
 
   it("shows a safe error when configuration cannot be loaded", async () => {

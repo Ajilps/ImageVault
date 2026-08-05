@@ -35,7 +35,7 @@ export default function SharedImagePage() {
           ImageVault
         </Link>
         {isLoading ? <div className="rounded-3xl border border-white/10 bg-white/5 p-14 text-center text-slate-300">Loading shared image…</div> : null}
-        {!isLoading && error ? <div className="rounded-3xl border border-rose-400/20 bg-rose-500/10 p-14 text-center"><h1 className="text-2xl font-bold">Public link unavailable</h1><p className="mt-3 text-rose-100">{error}</p></div> : null}
+        {!isLoading && error ? <div className="rounded-3xl border border-red-300 bg-red-50 p-14 text-center"><h1 className="text-2xl font-bold text-red-900">Public link unavailable</h1><p className="mt-3 font-semibold text-red-700">{error}</p></div> : null}
         {!isLoading && image ? <article className="overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl"><div className="grid max-h-[75vh] place-items-center bg-black/30 p-3"><img src={image.downloadUrl} alt={`Public image shared by ${image.uploadedBy.name}`} className="max-h-[70vh] max-w-full rounded-2xl object-contain" /></div><div className="flex flex-col gap-2 p-6 sm:flex-row sm:items-center sm:justify-between"><div><h1 className="text-lg font-bold">Shared by {image.uploadedBy.name}</h1><p className="mt-1 text-sm text-slate-400">Organisation-public ImageVault upload</p></div><p className="text-sm text-slate-400">{new Date(image.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}</p></div></article> : null}
       </section>
     </main>

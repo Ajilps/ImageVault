@@ -27,7 +27,7 @@ function serializeSubscription(subscription: PushSubscription): PushSubscription
 }
 
 export function PushNotificationManager() {
-  const { token } = useAuth();
+  const { user } = useAuth();
   const { config } = usePublicConfig();
   const [isSupported, setIsSupported] = useState(false);
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
@@ -58,7 +58,7 @@ export function PushNotificationManager() {
   }
 
   async function subscribe() {
-    if (!token || !config?.vapidPublicKey) return;
+    if (!user || !config?.vapidPublicKey) return;
     setError(null);
     setIsWorking(true);
     try {
@@ -67,7 +67,7 @@ export function PushNotificationManager() {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(config.vapidPublicKey),
       });
-      await api.subscribePush(token, serializeSubscription(next));
+      await api.subscribePush(serializeSubscription(next));
       setSubscription(next);
     } catch (caughtError) {
       setError(caughtError instanceof ApiError ? caughtError.message : "Push permission or subscription failed.");
@@ -77,11 +77,11 @@ export function PushNotificationManager() {
   }
 
   async function unsubscribe() {
-    if (!token || !subscription) return;
+    if (!user || !subscription) return;
     setError(null);
     setIsWorking(true);
     try {
-      await api.unsubscribePush(token, subscription.endpoint);
+      await api.unsubscribePush(subscription.endpoint);
       await subscription.unsubscribe();
       setSubscription(null);
     } catch (caughtError) {

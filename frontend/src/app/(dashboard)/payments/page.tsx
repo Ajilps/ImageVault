@@ -3,7 +3,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { useAuth } from "@/components/auth-provider";
 import { usePublicConfig } from "@/components/public-config-provider";
 import { RoleGate } from "@/components/role-gate";
 import { LoadingCards, Message, PageHeader, StatCard } from "@/components/ui";
@@ -31,7 +30,6 @@ function loadRazorpay(): Promise<boolean> {
 }
 
 export default function PaymentsPage() {
-  const { token } = useAuth();
   const { config, error: configError } = usePublicConfig();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [quota, setQuota] = useState<Quota | null>(null);
@@ -42,10 +40,9 @@ export default function PaymentsPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
-    if (!token) return;
     setIsLoading(true);
     try {
-      const [paymentResponse, quotaResponse] = await Promise.all([api.payments(token), api.quota(token)]);
+      const [paymentResponse, quotaResponse] = await Promise.all([api.payments(), api.quota()]);
       setPayments(paymentResponse.payments);
       setQuota(quotaResponse.quota);
     } catch (caughtError) {
@@ -53,17 +50,17 @@ export default function PaymentsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => { void loadData(); }, [loadData]);
 
   async function beginPayment() {
-    if (!token || !config) return;
+    if (!config) return;
     setError(null); setSuccess(null); setIsPaying(true);
     try {
       const available = await loadRazorpay();
       if (!available || !window.Razorpay) throw new ApiError("Razorpay Checkout could not be loaded. Check your connection and try again.", 503);
-      const response = await api.createPaymentOrder(token, packs);
+      const response = await api.createPaymentOrder(packs);
       const checkout = new window.Razorpay({
         key: response.order.keyId,
         amount: response.order.amount,
@@ -77,9 +74,9 @@ export default function PaymentsPage() {
             setError("Checkout was closed before payment verification.");
           },
         },
-        theme: { color: "#4f46e5" },
+        theme: { color: "#000000" },
         handler: (payment) => {
-          void api.verifyPayment(token, {
+          void api.verifyPayment({
             orderId: payment.razorpay_order_id,
             paymentId: payment.razorpay_payment_id,
             signature: payment.razorpay_signature,

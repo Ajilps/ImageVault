@@ -1,5 +1,17 @@
 name: image-upload-system
 
+x-backend-environment: &backend-environment
+  NODE_ENV: production
+  PORT: 4000
+  DATABASE_URL: postgresql://${POSTGRES_USER:-image_upload}:${POSTGRES_PASSWORD:-image_upload_local}@postgres:5432/${POSTGRES_DB:-image_upload}?schema=public
+  MINIO_ENDPOINT: minio
+  MINIO_PORT: 9000
+  MINIO_USE_SSL: "false"
+  MINIO_BUCKET: ${MINIO_BUCKET:-image-uploads}
+  MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minio_local}
+  MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minio_local_password}
+  S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -9,7 +21,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-image_upload}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-image_upload_local}
     ports:
-      - "${POSTGRES_HOST_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -34,8 +46,8 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio_local_password}
       MINIO_API_CORS_ALLOW_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
     ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+      - "127.0.0.1:${MINIO_API_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - minio_data:/data
     healthcheck:
@@ -62,6 +74,47 @@ services:
       - internal
     restart: on-failure
 
+  backend-migrate:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: migration
+    env_file:
+      - ../backend/.env
+    environment: *backend-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+    restart: "no"
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: runtime
+    env_file:
+      - ../backend/.env
+    environment: *backend-environment
+    ports:
+      - "127.0.0.1:${BACKEND_HOST_PORT:-4000}:4000"
+    init: true
+    depends_on:
+      backend-migrate:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - internal
+    restart: unless-stopped
+
   pgadmin:
     image: dpage/pgadmin4:latest
     profiles: ["pgadmin"]
@@ -70,7 +123,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@local.dev}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-localadmin}
     ports:
-      - "${PGADMIN_PORT:-5050}:80"
+      - "127.0.0.1:${PGADMIN_PORT:-5050}:80"
     depends_on:
       postgres:
         condition: service_healthy

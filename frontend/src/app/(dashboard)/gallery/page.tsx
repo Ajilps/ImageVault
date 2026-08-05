@@ -10,7 +10,7 @@ import { ApiError, api } from "@/lib/api";
 import type { ImageRecord, ManagedUser } from "@/lib/types";
 
 export default function GalleryPage() {
-  const { token, user } = useAuth();
+  const { user } = useAuth();
   const [images, setImages] = useState<ImageRecord[]>([]);
   const [members, setMembers] = useState<ManagedUser[]>([]);
   const [preview, setPreview] = useState<ImageRecord | null>(null);
@@ -22,13 +22,12 @@ export default function GalleryPage() {
   const [shareMessage, setShareMessage] = useState<string | null>(null);
 
   const loadImages = useCallback(async () => {
-    if (!token) return;
     setIsLoading(true);
     setError(null);
     try {
       const [imageResponse, memberResponse] = await Promise.all([
-        api.images(token, taggedUserId || undefined),
-        api.members(token),
+        api.images(taggedUserId || undefined),
+        api.members(),
       ]);
       setImages(imageResponse.images);
       setMembers(memberResponse.users);
@@ -37,21 +36,38 @@ export default function GalleryPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [taggedUserId, token]);
+  }, [taggedUserId]);
 
   useEffect(() => { void loadImages(); }, [loadImages]);
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const url = new URL(window.location.href);
+    const requestedImageId = url.searchParams.get("imageId");
+    if (!requestedImageId) return;
+
+    url.searchParams.delete("imageId");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+
+    const requestedImage = images.find((image) => image.id === requestedImageId);
+    if (requestedImage) {
+      setPreview(requestedImage);
+    } else {
+      setError("The notification image is no longer available in your gallery.");
+    }
+  }, [images, isLoading]);
 
   function publicLink(shareToken: string) {
     return `${window.location.origin}/shared/${encodeURIComponent(shareToken)}`;
   }
 
   async function createShare(image: ImageRecord) {
-    if (!token) return;
     setError(null);
     setShareMessage(null);
     setSharingImageId(image.id);
     try {
-      const response = await api.createImageShare(token, image.id);
+      const response = await api.createImageShare(image.id);
       setImages((current) => current.map((item) => item.id === image.id ? { ...item, shareToken: response.share.shareToken } : item));
       setShareUrl(publicLink(response.share.shareToken));
       setShareMessage("Public link created. Anyone with this link can view the image until you revoke it.");
@@ -75,11 +91,11 @@ export default function GalleryPage() {
   }
 
   async function revokeShare(image: ImageRecord) {
-    if (!token || !window.confirm("Revoke this public link? Anyone using it will immediately lose access.")) return;
+    if (!window.confirm("Revoke this public link? Anyone using it will immediately lose access.")) return;
     setError(null);
     setSharingImageId(image.id);
     try {
-      await api.revokeImageShare(token, image.id);
+      await api.revokeImageShare(image.id);
       setImages((current) => current.map((item) => item.id === image.id ? { ...item, shareToken: null } : item));
       setShareUrl(null);
       setShareMessage("Public link revoked.");

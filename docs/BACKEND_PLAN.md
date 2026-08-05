@@ -55,7 +55,7 @@ Exit criteria: valid login/me, invalid credentials, missing/malformed/expired to
 ## Phase 4 — Product Owner organisations
 
 1. Implement list/create/update/delete routes from the API reference.
-2. Create organisation and default Admin in one transaction with generated UUIDs and the configured default password.
+2. Create organisation and default Admin in one transaction with generated UUIDs and a unique generated temporary password returned once to the Product Owner.
 3. Reject duplicate emails and validate every field.
 4. Return member/image counts.
 5. Delete dependent notifications, images, payments, members, and organisation in a transaction. Collect object keys and delete S3 objects after commit; retry/log storage cleanup failure rather than restoring deleted database rows.

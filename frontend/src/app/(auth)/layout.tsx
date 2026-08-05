@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <main className="grid min-h-screen bg-slate-950 lg:grid-cols-[.9fr_1.1fr]">
-      <section className="hidden bg-[radial-gradient(circle_at_0%_20%,rgba(99,102,241,.72),transparent_40%),radial-gradient(circle_at_80%_85%,rgba(20,184,166,.35),transparent_40%)] p-12 text-white lg:flex lg:flex-col">
+      <section className="hidden bg-[radial-gradient(circle_at_0%_20%,rgba(255,255,255,.18),transparent_40%),radial-gradient(circle_at_80%_85%,rgba(255,255,255,.08),transparent_40%)] p-12 text-white lg:flex lg:flex-col">
         <Link href="/" className="flex items-center gap-3 text-lg font-bold">
           <span className="grid size-10 place-items-center rounded-xl bg-white text-indigo-600">I</span>
           ImageVault
@@ -15,7 +15,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </div>
         <p className="text-sm text-slate-300">Built for organisations that need simple image control.</p>
       </section>
-      <section className="flex items-center justify-center bg-[#f7f8fc] p-6 sm:p-10">{children}</section>
+      <section className="flex items-center justify-center bg-zinc-100 p-6 sm:p-10">{children}</section>
     </main>
   );
 }

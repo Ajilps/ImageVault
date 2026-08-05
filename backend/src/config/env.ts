@@ -86,6 +86,8 @@ if (vapidValues.some(Boolean) && !vapidValues.every(Boolean)) {
   throw new AppError("VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_SUBJECT must be configured together.", 500, "CONFIGURATION_ERROR");
 }
 
+const storageEndpoint = process.env.S3_ENDPOINT ?? (storageProvider === "minio" ? minioEndpoint() : undefined);
+
 export const env = {
   nodeEnv: required("NODE_ENV"),
   port: requiredInteger("PORT"),
@@ -129,7 +131,8 @@ export const env = {
       ? required("MINIO_BUCKET")
       : required("S3_BUCKET"),
   awsRegion: required("AWS_REGION"),
-  storageEndpoint: process.env.S3_ENDPOINT ?? (storageProvider === "minio" ? minioEndpoint() : undefined),
+  storageEndpoint,
+  storagePublicEndpoint: process.env.S3_PUBLIC_ENDPOINT ?? storageEndpoint,
   storageAccessKeyId:
     storageProvider === "minio"
       ? process.env.S3_ACCESS_KEY_ID ?? process.env.MINIO_ACCESS_KEY

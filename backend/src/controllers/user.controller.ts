@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 
 import { AppError } from "../errors/appError.js";
 import {
+  clearNotification,
   completeImageUpload,
   createPublicImageShare,
   getQuota,
@@ -47,6 +48,12 @@ export async function getOrganisationMembers(request: Request, response: Respons
 
 export async function getNotifications(request: Request, response: Response) {
   response.json({ notifications: await listNotifications(authenticatedUser(request)) });
+}
+
+export async function deleteNotification(request: Request, response: Response) {
+  const { notificationId } = request.params as { notificationId: string };
+  await clearNotification(authenticatedUser(request), notificationId);
+  response.status(204).send();
 }
 
 export async function postImageShare(request: Request, response: Response) {

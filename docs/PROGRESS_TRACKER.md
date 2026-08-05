@@ -33,19 +33,19 @@ Bring the existing frontend and backend into line with the updated documentation
 | Quota concurrency protection | COMPLETE | Upload completion uses a serializable transaction with environment-configured conflict retries; live PostgreSQL race test remains in external/integration work. |
 | Storage cleanup on User/organisation deletion | COMPLETE | Object keys are collected transactionally and S3 deletion is attempted after database commit without corrupting committed state. |
 | Abandoned/orphan upload lifecycle cleanup | NOT STARTED | Configure an S3 lifecycle or scheduled cleanup for signed uploads that are never completed. |
-| Tagged and broadcast database notifications | COMPLETE | Receiver scoping and gallery-linked notifications exist. |
+| Tagged and broadcast database notifications | COMPLETE | Receiver scoping and authenticated gallery links exist; notification payloads and anchors do not expose storage object keys or signed storage URLs. |
 | Notification polling/badge | COMPLETE | Runtime-configured polling pauses while hidden and refreshes on visibility; badge is labelled as total/recent semantics. |
 | Web Push subscriptions and delivery | COMPLETE | Prisma model/migration, scoped endpoints, VAPID delivery, expired-subscription cleanup, UI controls, worker push/click handling, and polling fallback implemented. Live delivery is externally blocked. |
 | Razorpay order/verify/webhook idempotency | COMPLETE | Server-side verification and atomic pending-to-success transition exist. |
 | Configurable payment packs and Checkout UX | COMPLETE | Pack size, price, and maximum come from API config; dismissal and verification states are distinct. |
-| PWA manifest, service worker, offline fallback | COMPLETE | Core files exist; caching remains private-safe. |
+| PWA manifest, service worker, offline fallback | COMPLETE | Core files exist; caching remains private-safe, and local development unregisters persistent workers to prevent stale Firefox navigation/reload behaviour. |
 | PWA install icons | COMPLETE | 192px, 512px, and maskable PNG assets are declared in the manifest. |
 | Token/session expiry alignment | COMPLETE | Backend returns token expiry; NextAuth rejects expired API tokens and client API `401` events end the session. |
 | Gallery filtering and preview | COMPLETE | Filter options come from all organisation members and images open in an accessible modal preview. |
 | Frontend accessibility and responsive states | IN PROGRESS | Core responsive UI and updated state labels exist; a complete keyboard/screen-reader audit is still required. |
 | ShadCN component adoption | NOT STARTED | Current interface uses project-local styled components; migrate to ShadCN if strict component-library compliance is required. |
 | Backend automated tests | IN PROGRESS | Twenty-two configuration, endpoint-protection, validation, visibility/share-policy, Express 5 compatibility, middleware-isolation, and role-matrix tests pass; broader PostgreSQL/S3/Razorpay integration coverage and >80% critical coverage remain. |
-| Frontend automated tests | IN PROGRESS | Thirty-two role-policy, UI, runtime-config, auth-expiry, direct-upload, password, slot-allocation, visibility, and public-share contract tests pass; push, payment, polling, and full route-flow coverage remain. |
+| Frontend automated tests | IN PROGRESS | Thirty-four role-policy, UI, runtime-config, auth-expiry, service-worker lifecycle, authenticated image-link, direct-upload, password, slot-allocation, visibility, and public-share contract tests pass; push, payment, polling, and full route-flow coverage remain. |
 | Local test/lint/build verification | COMPLETE | Prisma validation, backend tests/build, frontend tests/lint/build all pass. |
 | Live AWS/Azure/Razorpay/Web Push verification | BLOCKED | Requires deployment infrastructure and real/test provider credentials supplied outside source control. |
 
@@ -55,7 +55,7 @@ Bring the existing frontend and backend into line with the updated documentation
 | --- | --- | --- |
 | Backend tests | COMPLETE | 22/22 passed, including all role combinations, endpoint protection, password/slot validation, image visibility/share policy, shared-router isolation, and getter-only query validation. |
 | Backend TypeScript build | COMPLETE | `tsc` passed. |
-| Frontend tests | COMPLETE | 32/32 passed across 6 suites, including the protected-page role matrix and password, slot-allocation, visibility, public-sharing, and direct-storage upload contracts. |
+| Frontend tests | COMPLETE | 34/34 passed across 8 suites, including the protected-page role matrix and password, slot-allocation, visibility, public-sharing, authenticated notification links, service-worker lifecycle, and direct-storage upload contracts. |
 | Signed MinIO upload smoke test | COMPLETE | Browser-style CORS preflight returned 204; signed PNG PUT returned 200, HEAD verification passed, and the temporary object was deleted. |
 | Frontend lint | COMPLETE | ESLint passed with no findings. |
 | Frontend production build | COMPLETE | Next.js 16 production build generated all routes successfully. |

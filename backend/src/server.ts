@@ -7,6 +7,7 @@ import { ensureDefaultProductOwner } from "./services/auth.service.js";
 import { assertStorageReady } from "./services/storage.service.js";
 
 const PORT = env.port;
+const HOST = "0.0.0.0";
 let server: Server | undefined;
 
 async function start() {
@@ -15,9 +16,11 @@ async function start() {
     await ensureDefaultProductOwner();
     await assertStorageReady();
 
-    server = app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-      console.log(`Default Product Owner account ensured: ${env.defaultProductOwnerEmail}`);
+    server = app.listen(PORT, HOST, () => {
+      console.log(`Server is running on port${HOST}:${PORT}`);
+      console.log(
+        `Default Product Owner account ensured: ${env.defaultProductOwnerEmail}`,
+      );
     });
   } catch (error) {
     console.error("Unable to connect to the database.", error);

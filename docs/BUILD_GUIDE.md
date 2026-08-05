@@ -33,7 +33,7 @@ Set at least:
 | `BCRYPT_SALT_ROUNDS` | Yes | Password hashing cost |
 | `DEFAULT_PRODUCT_OWNER_NAME` | Yes | Bootstrap owner display name |
 | `DEFAULT_PRODUCT_OWNER_EMAIL` | Yes | Bootstrap owner login; globally unique |
-| `DEFAULT_ACCOUNT_PASSWORD` | Yes | Bootstrap password within the configured password bounds |
+| `DEFAULT_ACCOUNT_PASSWORD` | Yes | Initial Product Owner password within configured bounds; other accounts receive generated passwords |
 | `DEFAULT_IMAGE_QUOTA` | Yes | Initial quota assigned to newly provisioned accounts |
 | `SLOT_PACK_SIZE` | Yes | Upload slots added by one payment pack |
 | `SLOT_PACK_PRICE_INR` | Yes | Rupee price of one pack |
@@ -51,6 +51,7 @@ Set at least:
 | `QUOTA_TRANSACTION_MAX_RETRIES` | Yes | Serializable upload-completion retry count |
 | `NOTIFICATION_POLL_INTERVAL_MS` | Yes | Polling interval returned to the frontend |
 | `STORAGE_PROVIDER` | Yes | `minio` locally or `s3` in production |
+| `S3_PUBLIC_ENDPOINT` | MinIO via Docker/Tunnel | Browser-visible MinIO endpoint used in signed URLs |
 | `S3_PRESIGN_EXPIRES_IN` | Yes | Signed PUT/GET lifetime in seconds |
 | `MAX_FILE_SIZE` | Yes | Maximum image bytes |
 | `PUBLIC_SHARE_TOKEN_BYTES` | Yes | Entropy bytes used for revocable public image links; minimum 16 |
@@ -61,13 +62,25 @@ Set at least:
 | `VAPID_PRIVATE_KEY` | Push | Server-only Web Push private key |
 | `VAPID_SUBJECT` | Push | Contact URI such as `mailto:ops@example.com` |
 
-For MinIO also set `MINIO_ENDPOINT`, `MINIO_PORT`, `MINIO_USE_SSL`, `MINIO_BUCKET`, `MINIO_ACCESS_KEY`, and `MINIO_SECRET_KEY`. `docker compose -f docker/Docker-compose.yml up -d` runs the `minio-init` service to create the named private bucket and configures MinIO's supported `MINIO_API_CORS_ALLOW_ORIGIN` setting from `CORS_ORIGIN`. If MinIO is managed separately, create the bucket and configure the equivalent allowed origin before starting the API; the API now fails its startup readiness check when the bucket is unavailable.
+For MinIO also set `MINIO_ENDPOINT`, `MINIO_PORT`, `MINIO_USE_SSL`, `MINIO_BUCKET`, `MINIO_ACCESS_KEY`, and `MINIO_SECRET_KEY`. `S3_PUBLIC_ENDPOINT` must be the endpoint reachable by the browser (`http://localhost:9000` locally or the HTTPS storage Tunnel hostname when deployed). `docker compose -f docker/Docker-compose.yml up --build -d` builds the multi-stage backend image, applies Prisma migrations, creates the private bucket, and starts the API after its dependencies are ready. MinIO CORS uses `CORS_ORIGIN`. If MinIO is managed separately, create the bucket and configure the equivalent allowed origin before starting the API; the API fails its startup readiness check when the bucket is unavailable.
 
 For AWS set `S3_BUCKET` and `AWS_REGION`. Prefer an Azure VM managed/workload identity or tightly scoped AWS role. If static keys are unavoidable, inject `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` through the deployment secret store. The principal needs only the required object operations on the application prefix/bucket. Keep Block Public Access enabled and configure bucket CORS for the deployed frontend origin.
 
 ## 2. Database and backend
 
-Point `DATABASE_URL` at a fresh development database, then:
+To run the complete local backend stack in containers:
+
+```bash
+cp backend/.env.example backend/.env
+cp docker/.env.example docker/.env
+docker compose -f docker/Docker-compose.yml up --build -d
+docker compose -f docker/Docker-compose.yml ps
+curl http://localhost:4000/health
+```
+
+The one-shot `backend-migrate` service must complete successfully before `backend` starts. For a Cloudflare Tunnel deployment, set `S3_PUBLIC_ENDPOINT=https://storage.<your-domain>` and `CORS_ORIGIN=https://<your-vercel-domain>` in `docker/.env`, then route the API hostname to `http://localhost:4000` and storage hostname to `http://localhost:9000`.
+
+For backend development outside Docker, point `DATABASE_URL` at a fresh development database, then:
 
 ```bash
 cd backend
@@ -87,7 +100,7 @@ Use `npx prisma migrate dev --name <description>` only while authoring a new dev
 Create `frontend/.env.local`:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:4000
+API_URL=http://localhost:4000
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=replace-with-a-long-random-secret
 ```
@@ -105,7 +118,7 @@ npm run build
 npm run dev
 ```
 
-Open `http://localhost:3000`. `NEXT_PUBLIC_API_URL` must be reachable by both the browser and Vercel/NextAuth server runtime. Do not put backend JWT, Razorpay key secret, AWS secret, or webhook secret in a `NEXT_PUBLIC_*` variable.
+Open `http://localhost:3000`. `API_URL` must be reachable by the Next.js/NextAuth server runtime. The browser uses the same-origin `/api/backend` bridge and never receives the backend JWT. Do not put backend JWT, Razorpay key secret, AWS secret, or webhook secret in a `NEXT_PUBLIC_*` variable.
 
 ## 4. Razorpay test setup
 
@@ -148,7 +161,7 @@ Create a private S3 bucket in the chosen region with encryption, Block Public Ac
 
 ### Frontend on Vercel
 
-Set production `NEXT_PUBLIC_API_URL=https://<api-host>`, `NEXTAUTH_URL=https://<frontend-host>`, and a production `NEXTAUTH_SECRET`. Deploy only after the backend URL and CORS are ready. The frontend reads the public VAPID key and business rules from the API. Verify manifest/service worker/icons and Web Push over HTTPS, and ensure private API/image/payment responses are not cached by the service worker.
+Set production `API_URL=https://<api-host>`, `NEXTAUTH_URL=https://<frontend-host>`, and a production `NEXTAUTH_SECRET`. Deploy only after the backend URL is reachable from the Vercel runtime. The frontend reads the public VAPID key and business rules through its same-origin API bridge. Verify manifest/service worker/icons and Web Push over HTTPS, and ensure private API/image/payment responses are not cached by the service worker.
 
 ### Razorpay live mode
 

@@ -13,8 +13,8 @@ export async function getOrganisations(_request: Request, response: Response) {
 }
 
 export async function postOrganisation(request: Request, response: Response) {
-  const organisation = await createOrganisation(request.body);
-  response.status(201).json({ organisation });
+  const result = await createOrganisation(request.body);
+  response.status(201).json(result);
 }
 
 export async function patchOrganisation(request: Request, response: Response) {

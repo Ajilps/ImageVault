@@ -1,5 +1,5 @@
 import { AppError } from "../errors/appError.js";
-import { completeImageUpload, createPublicImageShare, getQuota, listOrganisationMembers, listNotifications, listOrganisationImages, requestImageUpload, revokePublicImageShare, } from "../services/user.service.js";
+import { clearNotification, completeImageUpload, createPublicImageShare, getQuota, listOrganisationMembers, listNotifications, listOrganisationImages, requestImageUpload, revokePublicImageShare, } from "../services/user.service.js";
 function authenticatedUser(request) {
     if (!request.auth) {
         throw new AppError("Authentication is required.", 401, "AUTHENTICATION_REQUIRED");
@@ -28,6 +28,11 @@ export async function getOrganisationMembers(request, response) {
 }
 export async function getNotifications(request, response) {
     response.json({ notifications: await listNotifications(authenticatedUser(request)) });
+}
+export async function deleteNotification(request, response) {
+    const { notificationId } = request.params;
+    await clearNotification(authenticatedUser(request), notificationId);
+    response.status(204).send();
 }
 export async function postImageShare(request, response) {
     const { imageId } = request.params;

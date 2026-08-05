@@ -8,7 +8,6 @@ import type { CurrentUser } from "@/lib/types";
 
 type AuthContextValue = {
   user: CurrentUser | null;
-  token: string | null;
   isReady: boolean;
   login: (input: { email: string; password: string }) => Promise<CurrentUser>;
   logout: () => Promise<void>;
@@ -29,11 +28,25 @@ function AuthState({ children }: { children: React.ReactNode }) {
   const { data: session, status, update } = useSession();
 
   useEffect(() => {
-    const expireSession = () => { void signOut({ redirect: false }); };
+    let hasExpired = false;
+    const expireSession = () => {
+      if (hasExpired) return;
+      hasExpired = true;
+      void signOut({ redirect: false });
+    };
     window.addEventListener("imagevault:authentication-expired", expireSession);
     if (session?.authError === "BACKEND_TOKEN_EXPIRED") expireSession();
-    return () => window.removeEventListener("imagevault:authentication-expired", expireSession);
-  }, [session?.authError]);
+
+    const expiresAt = session?.backendAccessTokenExpiresAt;
+    const expiryTimer = expiresAt
+      ? window.setTimeout(expireSession, Math.max(0, expiresAt - Date.now()))
+      : undefined;
+
+    return () => {
+      window.removeEventListener("imagevault:authentication-expired", expireSession);
+      if (expiryTimer !== undefined) window.clearTimeout(expiryTimer);
+    };
+  }, [session?.authError, session?.backendAccessTokenExpiresAt]);
 
   const login = useCallback(async (input: { email: string; password: string }) => {
     const result = await signIn("credentials", { ...input, redirect: false });
@@ -62,7 +75,6 @@ function AuthState({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       user: session?.authError ? null : session?.user ?? null,
-      token: session?.authError ? null : session?.backendAccessToken ?? null,
       isReady: status !== "loading",
       login,
       logout,

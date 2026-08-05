@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { env } from "../config/env.js";
 import { AppError } from "../errors/appError.js";
 import { prisma } from "../lib/prisma.js";
-import { hashPassword } from "./auth.service.js";
+import { generateTemporaryPassword, hashPassword } from "./auth.service.js";
 import { deleteStoredObjects } from "./storage.service.js";
 
 const adminSelect = {
@@ -42,7 +42,7 @@ export async function listOrganisations() {
 
 export async function createOrganisation(input: {
   name: string;
-  logoUrl: string;
+  logoUrl?: string;
   address: string;
   phone: string;
   admin: {
@@ -59,13 +59,14 @@ export async function createOrganisation(input: {
     throw new AppError("The default admin email is already in use.", 409, "EMAIL_IN_USE");
   }
 
-  return prisma.$transaction(async (transaction) => {
+  const temporaryPassword = generateTemporaryPassword();
+  const organisation = await prisma.$transaction(async (transaction) => {
     const admin = await transaction.user.create({
       data: {
         id: adminId,
         name: input.admin.name,
         email: adminEmail,
-        passwordHash: await hashPassword(env.defaultAccountPassword),
+        passwordHash: await hashPassword(temporaryPassword),
         role: "ADMIN",
         imageQuota: env.defaultImageQuota,
       },
@@ -76,7 +77,7 @@ export async function createOrganisation(input: {
       data: {
         id: organisationId,
         name: input.name,
-        logoUrl: input.logoUrl,
+        logoUrl: input.logoUrl ?? "",
         address: input.address,
         phone: input.phone,
         adminId,
@@ -91,6 +92,8 @@ export async function createOrganisation(input: {
 
     return { ...organisation, admin };
   });
+
+  return { organisation, temporaryPassword };
 }
 
 export async function updateOrganisation(

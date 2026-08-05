@@ -17,8 +17,8 @@ export async function getUsers(request: Request, response: Response) {
 }
 
 export async function postUser(request: Request, response: Response) {
-  const user = await createUser(authenticatedUser(request), request.body);
-  response.status(201).json({ user });
+  const result = await createUser(authenticatedUser(request), request.body);
+  response.status(201).json(result);
 }
 
 export async function patchUser(request: Request, response: Response) {

@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
+import { PasswordField } from "@/components/password-field";
 import { usePublicConfig } from "@/components/public-config-provider";
 import { RoleGate } from "@/components/role-gate";
 import { Message, PageHeader, StatCard } from "@/components/ui";
@@ -10,7 +11,7 @@ import { ApiError, api } from "@/lib/api";
 import { roleLabel } from "@/lib/roles";
 
 export default function ProfilePage() {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const { config } = usePublicConfig();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -21,7 +22,6 @@ export default function ProfilePage() {
 
   async function submitPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!token) return;
     setError(null);
     setSuccess(null);
 
@@ -32,7 +32,7 @@ export default function ProfilePage() {
 
     setIsSubmitting(true);
     try {
-      await api.changeOwnPassword(token, { currentPassword, newPassword });
+      await api.changeOwnPassword({ currentPassword, newPassword });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -68,9 +68,9 @@ export default function ProfilePage() {
         <h2 className="text-lg font-bold text-slate-900">Change your password</h2>
         <p className="mt-1 text-sm text-slate-500">Confirm your current password before choosing a new one.</p>
         <div className="mt-5 grid gap-4 md:grid-cols-3">
-          <PasswordField label="Current password" autoComplete="current-password" value={currentPassword} onChange={setCurrentPassword} />
-          <PasswordField label="New password" autoComplete="new-password" value={newPassword} onChange={setNewPassword} minLength={config?.passwordMinLength} maxLength={config?.passwordMaxLength} />
-          <PasswordField label="Confirm new password" autoComplete="new-password" value={confirmPassword} onChange={setConfirmPassword} minLength={config?.passwordMinLength} maxLength={config?.passwordMaxLength} />
+          <PasswordField required label="Current password" autoComplete="current-password" value={currentPassword} onChange={setCurrentPassword} />
+          <PasswordField required label="New password" autoComplete="new-password" value={newPassword} onChange={setNewPassword} minLength={config?.passwordMinLength} maxLength={config?.passwordMaxLength} />
+          <PasswordField required label="Confirm new password" autoComplete="new-password" value={confirmPassword} onChange={setConfirmPassword} minLength={config?.passwordMinLength} maxLength={config?.passwordMaxLength} />
         </div>
         {error ? <div className="mt-4"><Message>{error}</Message></div> : null}
         {success ? <div className="mt-4"><Message tone="success">{success}</Message></div> : null}
@@ -82,8 +82,4 @@ export default function ProfilePage() {
       </form>
     </RoleGate>
   );
-}
-
-function PasswordField({ label, value, onChange, autoComplete, minLength, maxLength }: { label: string; value: string; onChange: (value: string) => void; autoComplete: string; minLength?: number; maxLength?: number }) {
-  return <label className="text-sm font-semibold text-slate-700">{label}<input required type="password" autoComplete={autoComplete} minLength={minLength} maxLength={maxLength} value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-normal outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" /></label>;
 }

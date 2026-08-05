@@ -10,8 +10,8 @@ type LoginResponse = {
 };
 
 function backendUrl() {
-  const value = process.env.NEXT_PUBLIC_API_URL;
-  if (!value) throw new Error("NEXT_PUBLIC_API_URL must be configured.");
+  const value = process.env.API_URL;
+  if (!value) throw new Error("API_URL must be configured.");
   return value.replace(/\/$/, "");
 }
 
@@ -88,8 +88,8 @@ export const authOptions: NextAuthOptions = {
     session({ session, token }) {
       const isBackendTokenValid = typeof token.backendAccessTokenExpiresAt === "number" && token.backendAccessTokenExpiresAt > Date.now();
       if (token.backendAccessToken && token.imageVaultUser && isBackendTokenValid) {
-        session.backendAccessToken = token.backendAccessToken;
         session.user = token.imageVaultUser;
+        session.backendAccessTokenExpiresAt = token.backendAccessTokenExpiresAt;
         session.authError = undefined;
       } else if (token.imageVaultUser) {
         session.authError = "BACKEND_TOKEN_EXPIRED";

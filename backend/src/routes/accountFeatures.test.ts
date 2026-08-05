@@ -51,3 +51,9 @@ test("image share management is protected while shared-image retrieval is public
   assert.ok(publicRoute?.route);
   assert.equal(publicRoute.route.stack.length, 1, "public retrieval has a handler without user auth");
 });
+
+test("clearing a notification is protected and validates notification ownership input", () => {
+  const route = routeLayer(userRoutes, "/notifications/:notificationId", "delete");
+  assert.ok(route?.route);
+  assert.equal(route.route.stack.length, 4, "notification clearing requires auth, role, params, and handler middleware");
+});

@@ -19,7 +19,7 @@ export default function Home() {
 
   return (
     <main className="relative isolate min-h-screen overflow-hidden bg-slate-950 px-6 py-8 text-white">
-      <div className="absolute inset-x-0 top-0 -z-10 h-96 bg-[radial-gradient(circle_at_20%_0%,rgba(99,102,241,.45),transparent_40%),radial-gradient(circle_at_80%_20%,rgba(20,184,166,.25),transparent_35%)]" />
+      <div className="absolute inset-x-0 top-0 -z-10 h-96 bg-[radial-gradient(circle_at_20%_0%,rgba(255,255,255,.16),transparent_40%),radial-gradient(circle_at_80%_20%,rgba(255,255,255,.08),transparent_35%)]" />
       <div className="mx-auto flex max-w-6xl items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="grid size-10 place-items-center rounded-xl bg-white text-lg font-black text-indigo-600">I</span>

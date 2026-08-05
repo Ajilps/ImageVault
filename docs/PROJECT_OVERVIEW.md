@@ -59,7 +59,7 @@ Rules that must hold on both the UI and API:
 
 - Public sign-up is disabled. Credentials are provisioned through the configured Product Owner, organisation creation, and Admin user creation.
 - Passwords are hashed with bcrypt and are never returned by the API.
-- The default password is a bootstrap mechanism. Every authenticated role can change its own password after confirming the current password. Product Owners can reset linked organisation Admin passwords, and Admins can reset normal User passwords in their own organisation.
+- `DEFAULT_ACCOUNT_PASSWORD` bootstraps only the Product Owner. New Admins and Users receive unique generated temporary passwords shown once to their creator. Every authenticated role can change its own password after confirming the current password. Product Owners can reset linked organisation Admin passwords, and Admins can reset normal User passwords in their own organisation.
 - Successful login redirects Product Owner to `/organisations`, Admin to `/users`, and User to `/gallery`.
 - Expired or invalid backend tokens end the frontend session and return the user to `/login`.
 

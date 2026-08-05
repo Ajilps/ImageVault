@@ -1,7 +1,7 @@
 import { AppError } from "../errors/appError.js";
 import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
-import { hashPassword } from "./auth.service.js";
+import { generateTemporaryPassword, hashPassword } from "./auth.service.js";
 import { deleteStoredObjects } from "./storage.service.js";
 const managedUserSelect = {
     id: true,
@@ -38,17 +38,19 @@ export async function createUser(admin, input) {
     if (existingUser) {
         throw new AppError("An account with this email already exists.", 409, "EMAIL_IN_USE");
     }
-    return prisma.user.create({
+    const temporaryPassword = generateTemporaryPassword();
+    const user = await prisma.user.create({
         data: {
             name: input.name,
             email,
-            passwordHash: await hashPassword(env.defaultAccountPassword),
+            passwordHash: await hashPassword(temporaryPassword),
             role: "USER",
             imageQuota: env.defaultImageQuota,
             organizationId: organizationIdFor(admin),
         },
         select: managedUserSelect,
     });
+    return { user, temporaryPassword };
 }
 export async function updateUser(admin, userId, input) {
     const organizationId = organizationIdFor(admin);
