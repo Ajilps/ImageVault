@@ -147,11 +147,13 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             </div>
             <button
               type="button"
-              aria-label="Sign out"
-              className="grid size-9 place-items-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700 transition hover:bg-indigo-200"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
               onClick={() => { void logout().finally(() => router.replace("/login")); }}
             >
-              {user.name.charAt(0).toUpperCase()}
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="size-4" stroke="currentColor" strokeWidth="1.8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.625A2.625 2.625 0 0 0 13.125 3h-6.75A2.625 2.625 0 0 0 3.75 5.625v12.75A2.625 2.625 0 0 0 6.375 21h6.75a2.625 2.625 0 0 0 2.625-2.625V15m-4.5-3h9m0 0-3-3m3 3-3 3" />
+              </svg>
+              Log out
             </button>
           </div>
         </header>
